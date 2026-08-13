@@ -4,10 +4,20 @@ import CreateCampagne from '../views/campagnes/CreateCampagne.vue'
 import UpdateCampagne from '../views/campagnes/UpdateCampagne.vue'
 import DetailCampagne from '../views/campagnes/DetailCampagne.vue'
 import DeleteCampagne from '@/views/campagnes/DeleteCampagne.vue'
+import Login from '@/views/Login.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {
+      path: '/',
+      redirect: '/login'
+    },
+    {
+      path: '/login',
+      name: 'Login',
+      component: Login
+    },
     {
       path: '/campagnes',
       name: 'campagnes',
