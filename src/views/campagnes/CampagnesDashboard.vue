@@ -3,7 +3,47 @@
 <script setup>
 import { ref } from 'vue'
 import Sidebar from '@/components/Sidebar.vue'
+import DeleteCampagne from '@/components/DeleteCampagne.vue'
 
+const showDeleteModal = ref(false)
+
+const campagneASupprimer = ref(null)
+
+const suppressionEnCours = ref(false)
+
+// Fonction pour ouvrir le modal de suppression
+const ouvrirModalSuppression = (offer) => {
+
+  campagneASupprimer.value = offer
+
+  showDeleteModal.value = true
+
+}
+
+// Fonction pour fermer le modal de suppression
+const fermerModalSuppression = () => {
+
+  if (suppressionEnCours.value) {
+    return
+  }
+
+  showDeleteModal.value = false
+
+  campagneASupprimer.value = null
+
+}
+
+// Fonction pour confirmer la suppression
+const confirmerSuppression = () => {
+
+  suppressionEnCours.value = true
+
+  console.log(
+    'Suppression de la campagne :',
+    campagneASupprimer.value
+  )
+
+}
 // Gestion de la vue active
 const currentView = ref('campagnes')
 
@@ -274,7 +314,7 @@ const offers = ref([
         ========================== -->
 
         <div
-          class="bg-white p-3 rounded-5 shadow-sm mb-4 d-flex flex-wrap align-items-center gap-3"
+          class="bg-white p-3 rounded-3 shadow-sm mb-4 d-flex flex-wrap align-items-center gap-3"
         >
 
           <!-- Nom programme -->
@@ -326,9 +366,10 @@ const offers = ref([
           <!-- Bouton filtre -->
 
           <div class="align-self-end">
+            
 
             <button
-              class="btn btn-dark-blue rounded-4 px-4 py-2 fw-bold text-white"
+              class="btn btn-dark-blue px-4 py-2 rounded-3 fw-bold d-flex align-items-center gap-2 shadow-sm"
             >
               Appliquer les filtres
             </button>
@@ -371,13 +412,13 @@ const offers = ref([
                   <th
                     class="py-3 text-muted text-uppercase fs-7 fw-black"
                   >
-                    DURER
+                    DURÉE
                   </th>
 
                   <th
                     class="text-center py-3 text-muted text-uppercase fs-7 fw-black"
                   >
-                    CANDIDATES
+                    CANDIDATS
                   </th>
 
                   <th
@@ -387,7 +428,7 @@ const offers = ref([
                   </th>
 
                   <th
-                    class="pe-4 text-end py-3 text-muted text-uppercase fs-7 fw-black"
+                    class="pe-4 text-end py-3 text-muted text-uppercase fs-7 fw-black t"
                   >
                     ACTIONS
                   </th>
@@ -561,14 +602,13 @@ const offers = ref([
 
                       <!-- Supprimer -->
 
-                      <router-link
-                        to="/campagnes/delete/"
-                        class="btn btn-light btn-sm rounded-3 shadow-xs text-danger"
-                      >
-
-                        <i class="fa-regular fa-trash-can"></i>
-
-                      </router-link>
+                      <button
+                          type="button"
+                          class="btn btn-light btn-sm rounded-3 shadow-xs text-danger"
+                          @click="ouvrirModalSuppression(offer)"
+                        >
+                          <i class="fa-regular fa-trash-can"></i>
+                      </button>
 
                     </div>
 
@@ -736,6 +776,13 @@ const offers = ref([
       </main>
 
     </div>
+    <DeleteCampagne
+      v-if="showDeleteModal && campagneASupprimer"
+      :campagne="campagneASupprimer"
+      :suppression-en-cours="suppressionEnCours"
+      @cancel="fermerModalSuppression"
+      @confirm="confirmerSuppression"
+    />
 
   </div>
 

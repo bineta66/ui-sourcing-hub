@@ -1,5 +1,6 @@
 <!-- components/Sidebar.vue -->
 <script setup>
+
 defineProps({
   activeView: {
     type: String,
@@ -27,13 +28,9 @@ const navItems = [
     <!-- Section Supérieure : Logo + Menu -->
     <div>
       <!-- Logo / Brand Header -->
-      <div class="brand mb-5 d-flex align-items-center gap-3 ps-2">
-        <div class="brand-logo d-flex align-items-center justify-content-center">
-          <i class="fa-solid fa-user-gear fs-4 text-white"></i>
-        </div>
+      <div class="brand d-flex align-items-center gap-3 ">
         <div class="d-flex flex-column">
-          <span class="brand-title fw-bold lh-1 text-white">Sourcing</span>
-          <span class="brand-subtitle fw-extrabold text-white text-uppercase tracking-wider">HUB</span>
+          <img src="@/assets/logo.png" alt="Logo" class="img-fluid brand-title" />
         </div>
       </div>
 
@@ -77,7 +74,7 @@ const navItems = [
 <style scoped>
 .sidebar {
   width: 256px;
-  height: 100vh;
+  max-height: 100vh;
   background-color: #00313C;
   flex-shrink: 0;
   position: sticky;
