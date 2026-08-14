@@ -1,6 +1,6 @@
 <template>
   <div class="layout">
-    <Sidebar />
+    <Sidebar active-view="utilisateurs" />
 
     <main class="main">
       <header class="header">
@@ -247,7 +247,7 @@ const user = users.find(u => u.id === Number(route.params.id)) || users[0]
 }
 
 .main {
-  margin-left: 220px;
+ 
   flex: 1;
   min-height: 100vh;
   display: flex;

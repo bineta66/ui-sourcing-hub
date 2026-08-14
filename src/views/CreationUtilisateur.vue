@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard-page">
-    <Sidebar />
+    <Sidebar active-view="utilisateurs" />
 
     <main class="main-content">
       <header class="topbar">
@@ -253,7 +253,6 @@ const hoverBtn = ref(false)
 ========================= */
 .main-content {
   flex: 1;
-  margin-left: 220px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;

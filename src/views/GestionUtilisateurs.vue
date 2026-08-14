@@ -1,6 +1,6 @@
 <template>
   <div class="layout">
-    <Sidebar />
+    <Sidebar active-view="utilisateurs" />
 
     <main class="main">
       <header class="header">
@@ -310,7 +310,7 @@ const goToDetail = (id) => {
 }
 
 .main {
-  margin-left: 220px;
+  
   flex: 1;
   min-height: 100vh;
   display: flex;
