@@ -19,10 +19,10 @@
         <!-- Texte bas -->
         <div>
           <h4 class="fw-semibold text-white mb-3" style="font-size: 18px; line-height: 1.3; max-width: 450px;">
-            Connectez-vous pour accéder à votre espace collaboratif.
+            Réinitialisez votre mot de passe en toute sécurité.
           </h4>
           <p class="text-white-50 mb-0" style="font-size: 12px; line-height: 1.5; max-width: 300px;">
-            La plateforme centralisée pour mener à bien les sourcing.
+            Entrez votre adresse email pour recevoir un lien de réinitialisation.
           </p>
         </div>
 
@@ -36,15 +36,15 @@
           <!-- Header -->
           <div class="mb-5">
             <h2 class="fw-bold mb-3" style="font-size: 28px; color: #111827; line-height: 1.2;">
-              Connexion
+              Mot de passe oublié ?
             </h2>
             <p class="text-secondary mb-0" style="font-size: 14px;">
-              Accédez à votre compte pour continuer.
+              Nous vous enverrons un lien pour réinitialiser votre mot de passe.
             </p>
           </div>
 
           <!-- Formulaire -->
-          <form @submit.prevent="handleLogin" class="w-100">
+          <form @submit.prevent="handleReset" class="w-100">
 
             <!-- Email -->
             <div class="mb-4">
@@ -67,59 +67,6 @@
               </div>
             </div>
 
-            <!-- Mot de passe -->
-            <div class="mb-4">
-              <label for="password" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; padding: 0; margin-bottom: 10px;">
-                Mot de passe
-              </label>
-              <div class="input-group">
-                <span class="input-group-text bg-white border-end-0" style="border: 1px solid #E5E7EB; border-right: none; padding: 0 16px;">
-                  <i class="bi bi-lock" style="font-size: 18px; color: #9CA3AF;"></i>
-                </span>
-                <input
-                  id="password"
-                  v-model="form.password"
-                  :type="showPassword ? 'text' : 'password'"
-                  class="form-control border-start-0"
-                  style="height: 48px; font-size: 14px; border: 1px solid #E5E7EB; border-left: none; background-color: #FFFFFF;"
-                  placeholder="••••••••"
-                  required
-                >
-                <button
-                  type="button"
-                  class="input-group-text bg-white border-start-0"
-                  style="border: 1px solid #E5E7EB; border-left: none; cursor: pointer; padding: 0 16px;"
-                  @click="showPassword = !showPassword"
-                >
-                  <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'" style="font-size: 18px; color: #9CA3AF;"></i>
-                </button>
-              </div>
-            </div>
-
-            <!-- Options -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-              <div class="form-check d-flex align-items-center gap-2 mb-0" style="padding-left: 10px;">
-                <input
-                  id="remember"
-                  v-model="form.remember"
-                  class="form-check-input"
-                  type="checkbox"
-                  style="width: 16px; height: 16px; accent-color: #D20C4F; margin: 0;"
-                >
-                <label for="remember" class="form-check-label mb-0" style="font-size: 14px; color: #6B7280; cursor: pointer;">
-                  Se souvenir de moi
-                </label>
-              </div>
-              <a
-                href="#"
-                class="text-decoration-none fw-medium"
-                style="font-size: 14px; color: #D20C4F;"
-                @click.prevent="goToForgotPassword"
-              >
-                Mot de passe oublié ?
-              </a>
-            </div>
-
             <!-- Bouton -->
             <button
               type="submit"
@@ -132,21 +79,19 @@
             >
               <span v-if="loading">
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" style="width: 18px; height: 18px; border-width: 2px;"></span>
-                Connexion...
+                Envoi en cours...
               </span>
-              <span v-else>Connexion</span>
+              <span v-else>Réinitialiser le mot de passe</span>
             </button>
 
           </form>
 
-          <!-- Sécurité -->
+          <!-- Lien vers login -->
           <div class="text-center mt-4">
-            <span style="font-size: 12px; color: #A8AFB7; font-weight: 400;">
-              <i class="bi bi-shield-check me-1"></i>Connexion sécurisée et chiffrée de bout en bout
+            <span style="font-size: 12px; color: #6B7280; font-weight: 400;">
+              <a href="/login" style="color: #D20C4F; text-decoration: none; font-weight: 500;">← Retour à la connexion</a>
             </span>
           </div>
-
-         
 
         </div>
 
@@ -164,35 +109,24 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const form = reactive({
-  email: '',
-  password: '',
-  remember: false
+  email: ''
 })
 
 const loading = ref(false)
-const showPassword = ref(false)
 const hoverBtn = ref(false)
 
-const handleLogin = async () => {
+const handleReset = async () => {
   loading.value = true
   try {
-    console.log('Email :', form.email)
-    console.log('Password :', form.password)
-    console.log('Remember :', form.remember)
+    console.log('Réinitialisation demandée pour :', form.email)
     await new Promise(resolve => setTimeout(resolve, 1500))
+    alert('Si un compte existe avec cette adresse, un email de réinitialisation vous sera envoyé.')
+    router.push('/login')
   } catch (error) {
-    console.error('Erreur de connexion :', error)
+    console.error('Erreur lors de la réinitialisation :', error)
   } finally {
     loading.value = false
   }
-}
-
-const goToForgotPassword = () => {
-  router.push('/mot-de-passe-oublie')
-}
-
-const forgotPassword = () => {
-  console.log('Mot de passe oublié')
 }
 </script>
 

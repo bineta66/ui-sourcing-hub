@@ -19,10 +19,9 @@
         <!-- Texte bas -->
         <div>
           <h4 class="fw-semibold text-white mb-3" style="font-size: 18px; line-height: 1.3; max-width: 450px;">
-            Connectez-vous pour accéder à votre espace collaboratif.
-          </h4>
+            Définissez votre mot de passe pour accéder à votre espace collaboratif.          </h4>
           <p class="text-white-50 mb-0" style="font-size: 12px; line-height: 1.5; max-width: 300px;">
-            La plateforme centralisée pour mener à bien les sourcing.
+            Rejoignez la plateforme centralisée pour mener à bien les sourcing.
           </p>
         </div>
 
@@ -35,42 +34,23 @@
 
           <!-- Header -->
           <div class="mb-5">
-            <h2 class="fw-bold mb-3" style="font-size: 28px; color: #111827; line-height: 1.2;">
-              Connexion
+            <h2 class="fw-bold mb-3" style="font-size: 28px; color: #111827; line-height: 1.2;"">
+              Activer mon compte
             </h2>
             <p class="text-secondary mb-0" style="font-size: 14px;">
-              Accédez à votre compte pour continuer.
+              Définir votre  mot de passe pour continuer.
             </p>
           </div>
 
           <!-- Formulaire -->
-          <form @submit.prevent="handleLogin" class="w-100">
+          <form @submit.prevent="handleRegister" class="w-100">
 
-            <!-- Email -->
-            <div class="mb-4">
-              <label for="email" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; padding: 0; margin-bottom: 10px;">
-                Adresse email
-              </label>
-              <div class="input-group">
-                <span class="input-group-text bg-white border-end-0" style="border: 1px solid #E5E7EB; border-right: none; padding: 0 16px;">
-                  <i class="bi bi-envelope" style="font-size: 18px; color: #9CA3AF;"></i>
-                </span>
-                <input
-                  id="email"
-                  v-model="form.email"
-                  type="email"
-                  class="form-control border-start-0"
-                  style="height: 48px; font-size: 14px; border: 1px solid #E5E7EB; border-left: none; background-color: #FFFFFF;"
-                  placeholder="exemple@simplon.co"
-                  required
-                >
-              </div>
-            </div>
+        
 
             <!-- Mot de passe -->
             <div class="mb-4">
               <label for="password" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; padding: 0; margin-bottom: 10px;">
-                Mot de passe
+                Nouveau mot de passe
               </label>
               <div class="input-group">
                 <span class="input-group-text bg-white border-end-0" style="border: 1px solid #E5E7EB; border-right: none; padding: 0 16px;">
@@ -96,28 +76,33 @@
               </div>
             </div>
 
-            <!-- Options -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-              <div class="form-check d-flex align-items-center gap-2 mb-0" style="padding-left: 10px;">
+            <!-- Confirmation mot de passe -->
+            <div class="mb-4">
+              <label for="confirmPassword" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; padding: 0; margin-bottom: 10px;">
+                Confirmer le mot de passe
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-white border-end-0" style="border: 1px solid #E5E7EB; border-right: none; padding: 0 16px;">
+                  <i class="bi bi-lock-fill" style="font-size: 18px; color: #9CA3AF;"></i>
+                </span>
                 <input
-                  id="remember"
-                  v-model="form.remember"
-                  class="form-check-input"
-                  type="checkbox"
-                  style="width: 16px; height: 16px; accent-color: #D20C4F; margin: 0;"
+                  id="confirmPassword"
+                  v-model="form.confirmPassword"
+                  :type="showConfirmPassword ? 'text' : 'password'"
+                  class="form-control border-start-0"
+                  style="height: 48px; font-size: 14px; border: 1px solid #E5E7EB; border-left: none; background-color: #FFFFFF;"
+                  placeholder="••••••••"
+                  required
                 >
-                <label for="remember" class="form-check-label mb-0" style="font-size: 14px; color: #6B7280; cursor: pointer;">
-                  Se souvenir de moi
-                </label>
+                <button
+                  type="button"
+                  class="input-group-text bg-white border-start-0"
+                  style="border: 1px solid #E5E7EB; border-left: none; cursor: pointer; padding: 0 16px;"
+                  @click="showConfirmPassword = !showConfirmPassword"
+                >
+                  <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'" style="font-size: 18px; color: #9CA3AF;"></i>
+                </button>
               </div>
-              <a
-                href="#"
-                class="text-decoration-none fw-medium"
-                style="font-size: 14px; color: #D20C4F;"
-                @click.prevent="goToForgotPassword"
-              >
-                Mot de passe oublié ?
-              </a>
             </div>
 
             <!-- Bouton -->
@@ -132,19 +117,12 @@
             >
               <span v-if="loading">
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" style="width: 18px; height: 18px; border-width: 2px;"></span>
-                Connexion...
+                Activation compte...
               </span>
-              <span v-else>Connexion</span>
+              <span v-else>Activer mon compte</span>
             </button>
 
           </form>
-
-          <!-- Sécurité -->
-          <div class="text-center mt-4">
-            <span style="font-size: 12px; color: #A8AFB7; font-weight: 400;">
-              <i class="bi bi-shield-check me-1"></i>Connexion sécurisée et chiffrée de bout en bout
-            </span>
-          </div>
 
          
 
@@ -164,35 +142,32 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const form = reactive({
-  email: '',
+  
   password: '',
-  remember: false
+  confirmPassword: ''
 })
 
 const loading = ref(false)
 const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 const hoverBtn = ref(false)
 
-const handleLogin = async () => {
+const handleRegister = async () => {
+  if (form.password !== form.confirmPassword) {
+    alert('Les mots de passe ne correspondent pas.')
+    return
+  }
+
   loading.value = true
   try {
-    console.log('Email :', form.email)
-    console.log('Password :', form.password)
-    console.log('Remember :', form.remember)
+    console.log('Inscription :', form)
     await new Promise(resolve => setTimeout(resolve, 1500))
+    router.push('/login')
   } catch (error) {
-    console.error('Erreur de connexion :', error)
+    console.error('Erreur d\'inscription :', error)
   } finally {
     loading.value = false
   }
-}
-
-const goToForgotPassword = () => {
-  router.push('/mot-de-passe-oublie')
-}
-
-const forgotPassword = () => {
-  console.log('Mot de passe oublié')
 }
 </script>
 
