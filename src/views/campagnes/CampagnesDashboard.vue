@@ -1,7 +1,7 @@
 <!-- views/OffreDashboard.vue -->
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import Sidebar from '@/components/Sidebar.vue'
 import DeleteCampagne from '@/components/DeleteCampagne.vue'
 import { onMounted } from 'vue'
@@ -14,7 +14,8 @@ onMounted(async () => {
   console.log(campagnesStore.items) 
 })
 
-
+// Calcul du nombre de campagnes
+const nombreCampagnes = computed(() => campagnesStore.items.length)
 
 
 const showDeleteModal = ref(false)
@@ -73,70 +74,22 @@ const handleLogout = () => {
 // Données fictives pour le tableau des offres
 const offers = ref([
   {
-    id: 1,
-    title: 'Introduction à l’infrastructure cloud',
-    category: 'FORMATION TECHNIQUE',
-    categoryColor: '#2563EB',
-    categoryBg: '#EFF6FF',
     icon: 'fa-solid fa-cloud',
-    description:
-      'Fondamentaux des modèles d’architecture AWS et Azure pour débutants...',
-    dates: 'Oct 24 - Nov 12',
-    durationDetail: 'Bientôt disponible',
-    candidatesCount: 42,
-    candidatesDetail: 'INSCRITS / INSCRITES',
-    status: 'À VENIR',
     statusBg: '#FEF3C7',
     statusColor: '#D97706'
   },
   {
-    id: 2,
-    title: 'Analyse avancée des données',
-    category: 'BUSINESS INTELLIGENCE',
-    categoryColor: '#9333EA',
-    categoryBg: '#F3E8FF',
     icon: 'fa-solid fa-chart-line',
-    description:
-      'Maîtriser Python pour la visualisation de données et la prédiction...',
-    dates: 'Sep 01 - Oct 30',
-    durationDetail: '8 semaines restantes',
-    candidatesCount: 128,
-    candidatesDetail: 'INSCRITS / INSCRITES',
-    status: 'EN PROGRESSION',
     statusBg: '#DCFCE7',
     statusColor: '#16A34A'
   },
   {
-    id: 3,
-    title: 'Cybersécurité',
-    category: 'SERVICE DE SÉCURITÉ',
-    categoryColor: '#DC2626',
-    categoryBg: '#FEE2E2',
     icon: 'fa-solid fa-shield-halved',
-    description:
-      'Fondamentaux de la détection des menaces et de la gestion des incidents...',
-    dates: 'Jan 10 - Feb 05',
-    durationDetail: 'Configuration en attente',
-    candidatesCount: 0,
-    candidatesDetail: "PAS D'INSCRIPTION",
-    status: 'PASSÉ',
     statusBg: '#F3F4F6',
     statusColor: '#6B7280'
   },
   {
-    id: 4,
-    title: 'Conception de produits UX/UI',
-    category: 'CREATIVE STUDIO',
-    categoryColor: '#D97706',
-    categoryBg: '#FEF3C7',
     icon: 'fa-solid fa-laptop-code',
-    description:
-      "Cycle complet de conception de produit, de la recherche utilisateur jusqu'à...",
-    dates: 'Nov 15 - Dec 20',
-    durationDetail: 'Inscriptions ouvertes',
-    candidatesCount: 15,
-    candidatesDetail: 'INSCRITS / INSCRITES',
-    status: 'À VENIR',
     statusBg: '#FEF3C7',
     statusColor: '#D97706'
   }
@@ -283,7 +236,7 @@ const offers = ref([
              STAT CARDS
         ========================== -->
 
-        <div class="d-flex gap-4 mb-4 flex-wrap" v-for="campagne in allCampagnes" :key="campagne.id">
+        <div class="d-flex gap-4 mb-4 flex-wrap">
 
           <!-- Offres actives -->
 
@@ -292,11 +245,11 @@ const offers = ref([
           >
 
             <span class="stat-label text-muted fw-extrabold text-uppercase">
-              {{ campagne.title }}
+              Campagnes
             </span>
 
             <span class="stat-value text-dark-blue fw-black">
-              12
+              {{ nombreCampagnes }}
             </span>
 
           </div>
@@ -455,48 +408,24 @@ const offers = ref([
               <tbody>
 
                 <tr
-                  v-for="offer in offers"
-                  :key="offer.id"
+                  v-for="campagne in campagnesStore.items"
+                  :key="campagne.id"
                 >
-
                   <!-- =========================
-                       PROGRAMME
+                      PROGRAMME
                   ========================== -->
 
                   <td class="ps-4 py-3">
 
                     <div class="d-flex align-items-center gap-3">
 
-                      <div
-                        class="icon-box rounded-4 d-flex align-items-center justify-content-center"
-                        :style="{
-                          backgroundColor: offer.categoryBg,
-                          color: offer.categoryColor
-                        }"
-                      >
-
-                        <i
-                          :class="offer.icon"
-                          class="fs-5"
-                        ></i>
-
-                      </div>
-
-
                       <div>
 
                         <div
                           class="fw-extrabold text-dark-blue fs-6 lh-sm"
                         >
-                          {{ offer.title }}
+                          {{ campagne.title || 'Titre non disponible' }}
                         </div>
-
-                        <span
-                          class="badge-cat fw-black text-uppercase"
-                          :style="{ color: offer.categoryColor }"
-                        >
-                          {{ offer.category }}
-                        </span>
 
                       </div>
 
@@ -506,19 +435,19 @@ const offers = ref([
 
 
                   <!-- =========================
-                       DESCRIPTION
+                      DESCRIPTION
                   ========================== -->
 
                   <td
                     class="py-3 text-muted fs-7"
                     style="max-width: 250px;"
                   >
-                    {{ offer.description }}
+                    {{ campagne.description || 'Aucune description disponible' }}
                   </td>
 
 
                   <!-- =========================
-                       DUREE
+                      DUREE
                   ========================== -->
 
                   <td class="py-3">
@@ -526,21 +455,21 @@ const offers = ref([
                     <div
                       class="fw-bold text-dark-blue fs-7"
                     >
-                      {{ offer.dates }}
+                      {{ campagne.begin_date || 'Dates non disponibles' }}
                     </div>
 
                     <small
                       class="text-success fw-semibold"
                       style="font-size: 11px;"
                     >
-                      {{ offer.durationDetail }}
+                      {{ campagne.end_date || 'Durée non disponible' }}
                     </small>
 
                   </td>
 
 
                   <!-- =========================
-                       CANDIDATS
+                      CANDIDATS
                   ========================== -->
 
                   <td class="text-center py-3">
@@ -548,21 +477,21 @@ const offers = ref([
                     <div
                       class="fw-black text-dark-blue fs-5 lh-1"
                     >
-                      {{ offer.candidatesCount }}
+                      {{ campagne.candidatesCount || 0 }}
                     </div>
 
                     <span
                       class="text-muted text-uppercase fw-extrabold"
                       style="font-size: 10px;"
                     >
-                      {{ offer.candidatesDetail }}
+                      {{ campagne.candidatesDetail || 'CANDIDATS' }}
                     </span>
 
                   </td>
 
 
                   <!-- =========================
-                       STATUT
+                      STATUT
                   ========================== -->
 
                   <td class="py-3">
@@ -570,18 +499,18 @@ const offers = ref([
                     <span
                       class="badge px-3 py-2 rounded-pill fw-extrabold fs-7"
                       :style="{
-                        backgroundColor: offer.statusBg,
-                        color: offer.statusColor
+                        backgroundColor: campagne.statusBg || '#F3F4F6',
+                        color: campagne.statusColor || '#6B7280'
                       }"
                     >
-                      {{ offer.status }}
+                      {{ campagne.status || 'STATUT INCONNU' }}
                     </span>
 
                   </td>
 
 
                   <!-- =========================
-                       ACTIONS
+                      ACTIONS
                   ========================== -->
 
                   <td class="pe-4 text-end py-3">
@@ -594,9 +523,7 @@ const offers = ref([
                         to="/campagnes/update/"
                         class="btn btn-light btn-sm rounded-3 shadow-xs text-primary"
                       >
-
                         <i class="fa-regular fa-pen-to-square"></i>
-
                       </router-link>
 
 
@@ -606,20 +533,17 @@ const offers = ref([
                         to="/campagnes/detail/"
                         class="btn btn-light btn-sm rounded-3 shadow-xs text-secondary"
                       >
-
                         <i class="fa-regular fa-eye"></i>
-
                       </router-link>
 
 
                       <!-- Supprimer -->
 
                       <button
-                          type="button"
-                          class="btn btn-light btn-sm rounded-3 shadow-xs text-danger"
-                          @click="ouvrirModalSuppression(offer)"
-                        >
-                          <i class="fa-regular fa-trash-can"></i>
+                        type="button"
+                        class="btn btn-light btn-sm rounded-3 shadow-xs text-danger"
+                      >
+                        <i class="fa-regular fa-trash-can"></i>
                       </button>
 
                     </div>

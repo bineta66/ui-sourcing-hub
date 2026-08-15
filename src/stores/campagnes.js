@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getCampagnes } from '@/api/endpoints/campagnes'
+import { getCampagnes, createCampagne  } from '@/api/endpoints/campagnes'
 
 export const useCampagnesStore = defineStore('campagnes', {
   state: () => ({
@@ -19,5 +19,10 @@ export const useCampagnesStore = defineStore('campagnes', {
         this.loading = false
       }
     },
+    async creerCampagne(payload) {
+      const { data } = await createCampagne(payload)
+      this.items.push(data)
+      return data
+    }
   },
 })
