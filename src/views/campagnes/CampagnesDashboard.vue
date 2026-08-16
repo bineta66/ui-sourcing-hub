@@ -14,8 +14,60 @@ onMounted(async () => {
   console.log(campagnesStore.items) 
 })
 
+// Valeurs sélectionnées dans les deux <select> de filtre
+const filtreProgramme = ref('') // '' = "Tous les programmes"
+const filtreStatut = ref('')    // '' = "Tous les statuts"
+
+// Liste unique des titres de campagnes, pour remplir dynamiquement
+// le <select> "Nom de programme" (au lieu d'options codées en dur)
+const programmesDisponibles = computed(() => {
+  const titres = campagnesStore.items.map((c) => c.title)
+  return [...new Set(titres)] // Set retire les doublons
+})
+
+// Liste des campagnes affichées dans le tableau, après application des filtres
+const campagnesFiltrees = computed(() => {
+  return campagnesStore.items.filter((campagne) => {
+    // Si un filtre "programme" est choisi, la campagne doit correspondre EXACTEMENT
+    const matchProgramme = !filtreProgramme.value || campagne.title === filtreProgramme.value
+
+    // Si un filtre "statut" est choisi, la campagne doit correspondre EXACTEMENT
+    const matchStatut = !filtreStatut.value || campagne.status === filtreStatut.value
+
+    // Les deux conditions doivent être vraies (ET logique)
+    // -> permet de filtrer par programme seul, statut seul, ou les deux ensemble
+    return matchProgramme && matchStatut
+  })
+})
+
+// Réinitialise les filtres (optionnel, pratique à ajouter)
+const reinitialiserFiltres = () => {
+  filtreProgramme.value = ''
+  filtreStatut.value = ''
+}
+
 // Calcul du nombre de campagnes
-const nombreCampagnes = computed(() => campagnesStore.items.length)
+const nombreCampagnes = computed(() => campagnesFiltrees.value.length)
+
+// Campagne publiée
+const campagnePublier = computed(() =>
+  campagnesStore.items.filter(
+    campagne => campagne.status === 'publiee'
+  ).length
+)
+// Campagne clocturé
+const campagneClocturer = computed(() =>
+  campagnesStore.items.filter(
+    campagne => campagne.status === 'cloturee'
+  ).length
+)
+// Campagne en brouillon
+
+const campagneBrouillon = computed(() =>
+  campagnesStore.items.filter(
+    campagne => campagne.status === 'brouillon'
+  ).length
+)
 
 
 const showDeleteModal = ref(false)
@@ -25,9 +77,9 @@ const campagneASupprimer = ref(null)
 const suppressionEnCours = ref(false)
 
 // Fonction pour ouvrir le modal de suppression
-const ouvrirModalSuppression = (offer) => {
+const ouvrirModalSuppression = (campagne) => {
 
-  campagneASupprimer.value = offer
+  campagneASupprimer.value = campagne
 
   showDeleteModal.value = true
 
@@ -47,15 +99,19 @@ const fermerModalSuppression = () => {
 }
 
 // Fonction pour confirmer la suppression
-const confirmerSuppression = () => {
-
+const confirmerSuppression = async () => {
   suppressionEnCours.value = true
 
-  console.log(
-    'Suppression de la campagne :',
-    campagneASupprimer.value
-  )
-
+  try {
+    await campagnesStore.supprimerCampagne(campagneASupprimer.value.id)
+    showDeleteModal.value = false
+    campagneASupprimer.value = null
+  } catch (err) {
+    console.error('Erreur lors de la suppression de la campagne :', err.response?.data)
+    // Optionnel : afficher un message d'erreur à l'utilisateur ici
+  } finally {
+    suppressionEnCours.value = false
+  }
 }
 // Gestion de la vue active
 const currentView = ref('campagnes')
@@ -245,7 +301,7 @@ const offers = ref([
           >
 
             <span class="stat-label text-muted fw-extrabold text-uppercase">
-              Campagnes
+              Nombre de Campagnes
             </span>
 
             <span class="stat-value text-dark-blue fw-black">
@@ -262,11 +318,39 @@ const offers = ref([
           >
 
             <span class="stat-label text-muted fw-extrabold text-uppercase">
-              TOTAL OFFRES
+              Campagnes publiées
             </span>
 
-            <span class="stat-value text-pink fw-black">
-              842
+            <span class="stat-value text-success fw-black">
+              {{ campagnePublier }}
+            </span>
+
+          </div>
+
+          <div
+            class="card card-stat px-4 py-3 border-0 shadow-sm rounded-4"
+          >
+
+            <span class="stat-label text-muted fw-extrabold text-uppercase">
+              Campagnes clocturée
+            </span>
+
+            <span class="stat-value text-warning fw-black">
+              {{ campagneClocturer}}
+            </span>
+
+          </div>
+
+          <div
+            class="card card-stat px-4 py-3 border-0 shadow-sm rounded-4"
+          >
+
+            <span class="stat-label text-muted fw-extrabold text-uppercase">
+              Campagnes en brouillon
+            </span>
+
+            <span class="stat-value text-danger fw-black">
+              {{ campagneBrouillon}}
             </span>
 
           </div>
@@ -283,62 +367,44 @@ const offers = ref([
         >
 
           <!-- Nom programme -->
-
           <div class="flex-grow-1">
-
-            <label
-              class="form-label text-muted fw-black fs-7 text-uppercase mb-1"
-            >
-              Nom de programme
-            </label>
-
             <select
+              v-model="filtreProgramme"
               class="form-select rounded-4 border-light bg-light-subtle fw-bold text-dark-blue"
             >
-
-              <option selected>
-                Tous les programmes
+              <option value="">Tous les programmes</option>
+              <option
+                v-for="titre in programmesDisponibles"
+                :key="titre"
+                :value="titre"
+              >
+                {{ titre }}
               </option>
-
             </select>
-
           </div>
-
 
           <!-- Statut -->
-
           <div class="flex-grow-1">
-
-            <label
-              class="form-label text-muted fw-black fs-7 text-uppercase mb-1"
-            >
-              Statut
-            </label>
-
             <select
+              v-model="filtreStatut"
               class="form-select rounded-4 border-light bg-light-subtle fw-bold text-dark-blue"
             >
-
-              <option selected>
-                Statut
-              </option>
-
+              <option value="">Tous les statuts</option>
+              <option value="brouillon">Brouillon</option>
+              <option value="publiee">Publiée</option>
+              <option value="cloturee">Clôturée</option>
             </select>
-
           </div>
 
-
-          <!-- Bouton filtre -->
-
+          <!-- Bouton réinitialiser (optionnel) -->
           <div class="align-self-end">
-            
-
             <button
-              class="btn btn-dark-blue px-4 py-2 rounded-3 fw-bold d-flex align-items-center gap-2 shadow-sm"
+              type="button"
+              class="btn btn-light px-4 py-2 rounded-3 fw-bold"
+              @click="reinitialiserFiltres"
             >
-              Appliquer les filtres
+              Réinitialiser
             </button>
-
           </div>
 
         </div>
@@ -408,7 +474,7 @@ const offers = ref([
               <tbody>
 
                 <tr
-                  v-for="campagne in campagnesStore.items"
+                  v-for="campagne in campagnesFiltrees"
                   :key="campagne.id"
                 >
                   <!-- =========================
@@ -520,7 +586,7 @@ const offers = ref([
                       <!-- Modifier -->
 
                       <router-link
-                        to="/campagnes/update/"
+                        :to="`/campagnes/update/${campagne.id}`"
                         class="btn btn-light btn-sm rounded-3 shadow-xs text-primary"
                       >
                         <i class="fa-regular fa-pen-to-square"></i>
@@ -530,7 +596,7 @@ const offers = ref([
                       <!-- Voir détails -->
 
                       <router-link
-                        to="/campagnes/detail/"
+                        :to="`/campagnes/detail/${campagne.id}`"
                         class="btn btn-light btn-sm rounded-3 shadow-xs text-secondary"
                       >
                         <i class="fa-regular fa-eye"></i>
@@ -542,6 +608,7 @@ const offers = ref([
                       <button
                         type="button"
                         class="btn btn-light btn-sm rounded-3 shadow-xs text-danger"
+                        @click="ouvrirModalSuppression(campagne)"
                       >
                         <i class="fa-regular fa-trash-can"></i>
                       </button>
