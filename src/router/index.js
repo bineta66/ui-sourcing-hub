@@ -11,6 +11,10 @@ import UpdateCampagne from '../views/campagnes/UpdateCampagne.vue'
 import DetailCampagne from '../views/campagnes/DetailCampagne.vue'
 import FormBuilderView from '../views/admin/FormBuilderView.vue'
 import Candidature from '../views/Candidature.vue'
+import CandidateEntretiens from '../views/candidate/CandidateEntretiens.vue'
+import CandidateTests from '../views/candidate/CandidateTests.vue'
+import CandidateCandidature from '../views/candidate/CandidateCandidature.vue'
+import CandidateProfile from '../views/candidate/Profile.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -78,6 +82,26 @@ const router = createRouter({
       path: '/candidature/:slug',
       name: 'candidature',
       component: Candidature
+    },
+    {
+      path: '/candidate/entretiens',
+      name: 'candidate-entretiens',
+      component: CandidateEntretiens
+    },
+    {
+      path: '/candidate/tests',
+      name: 'candidate-tests',
+      component: CandidateTests
+    },
+    {
+      path: '/candidate/candidature',
+      name: 'candidate-candidature',
+      component: CandidateCandidature
+    },
+    {
+      path: '/candidate/profile',
+      name: 'candidate-profile',
+      component: CandidateProfile
     }
   ],
 })
