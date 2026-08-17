@@ -4,6 +4,18 @@
 import { ref } from 'vue'
 import Sidebar from '@/components/Sidebar.vue'
 import DeleteCampagne from '@/components/DeleteCampagne.vue'
+import { onMounted } from 'vue'
+import { useCampagnesStore } from '@/stores/campagnes'
+
+// Récupération des campagnes depuis le store
+const campagnesStore = useCampagnesStore()
+onMounted(async () => {
+  await campagnesStore.fetchCampagnes()
+  console.log(campagnesStore.items) 
+})
+
+
+
 
 const showDeleteModal = ref(false)
 
@@ -271,7 +283,7 @@ const offers = ref([
              STAT CARDS
         ========================== -->
 
-        <div class="d-flex gap-4 mb-4 flex-wrap">
+        <div class="d-flex gap-4 mb-4 flex-wrap" v-for="campagne in allCampagnes" :key="campagne.id">
 
           <!-- Offres actives -->
 
@@ -280,7 +292,7 @@ const offers = ref([
           >
 
             <span class="stat-label text-muted fw-extrabold text-uppercase">
-              OFFRES ACTIVE
+              {{ campagne.title }}
             </span>
 
             <span class="stat-value text-dark-blue fw-black">
