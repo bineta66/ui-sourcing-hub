@@ -99,7 +99,7 @@ const router = createRouter({
       component: CandidateCandidature
     },
     {
-      path: '/candidate/profile',
+      path: '/candidate/profil',
       name: 'candidate-profile',
       component: CandidateProfile
     }
