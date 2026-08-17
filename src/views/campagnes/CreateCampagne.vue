@@ -157,9 +157,6 @@ const fermer = () => window.history.back()
           <section class="form-header">
             <div class="d-flex justify-content-between align-items-start">
               <h1 class="form-title">Créer une nouvelle campagne</h1>
-              <button type="button" class="close-button" @click="fermer">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
             </div>
 
             <div>
@@ -231,8 +228,6 @@ const fermer = () => window.history.back()
           </section>
 
           <section class="settings-section">
-            <h2 class="settings-title">Paramètres</h2>
-
             <div class="row g-3 mb-4">
               <div class="col-md-6">
                 <label class="custom-label">Date de début</label>
@@ -255,7 +250,7 @@ const fermer = () => window.history.back()
             <div>
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <div class="d-flex align-items-center gap-2">
-                  <h3 class="criteria-title mb-0">Critères d'évaluation</h3>
+                  <span class="criteria-title mb-0">Critères d'évaluation</span>
                   <i class="fa-regular fa-circle-question text-secondary" title="Critères utilisés pour évaluer la campagne"></i>
                 </div>
 
@@ -454,6 +449,7 @@ const fermer = () => window.history.back()
   flex-direction: column;
   gap: 16px;
   border-bottom: 1px solid #E2E8F0;
+  background-color: #FAFAFA;
 }
 
 .form-title {
@@ -573,9 +569,9 @@ const fermer = () => window.history.back()
 }
 
 .criteria-title {
-  color: #1E293B;
+  color: #64748B;
   font-family: 'Inter', sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -653,7 +649,7 @@ const fermer = () => window.history.back()
 }
 
 .btn-cancel {
-  padding: 8px 16px;
+  padding: 8px 40px;
   background-color: transparent;
   border: none;
   border-radius: 6px;

@@ -128,28 +128,20 @@ const handleLogout = () => {
 }
 
 // Données fictives pour le tableau des offres
-const offers = ref([
-  {
-    icon: 'fa-solid fa-cloud',
-    statusBg: '#FEF3C7',
-    statusColor: '#D97706'
-  },
-  {
-    icon: 'fa-solid fa-chart-line',
-    statusBg: '#DCFCE7',
-    statusColor: '#16A34A'
-  },
-  {
-    icon: 'fa-solid fa-shield-halved',
-    statusBg: '#F3F4F6',
-    statusColor: '#6B7280'
-  },
-  {
-    icon: 'fa-solid fa-laptop-code',
-    statusBg: '#FEF3C7',
-    statusColor: '#D97706'
-  }
-])
+// Mapping centralisé : chaque valeur de statut (côté Django) correspond
+// à un libellé affiché + des couleurs de badge
+const STATUTS = {
+  brouillon: { label: 'Brouillon', bg: '#F3F4F6', color: '#6B7280' },
+  publiee:   { label: 'Publiée',   bg: '#DCFCE7', color: '#16A34A' },
+  cloturee:  { label: 'Clôturée',  bg: '#FEE2E2', color: '#DC2626' }
+}
+
+// Retourne les infos d'affichage pour un statut donné
+// -> valeur de secours si le statut est inconnu/absent
+const getStatutInfo = (status) => {
+  return STATUTS[status] || { label: 'Statut inconnu', bg: '#F3F4F6', color: '#6B7280' }
+}
+
 </script>
 
 
@@ -400,7 +392,7 @@ const offers = ref([
           <div class="align-self-end">
             <button
               type="button"
-              class="btn btn-light px-4 py-2 rounded-3 fw-bold"
+              class="btn btn-pink px-4 py-2 rounded-3 fw-bold"
               @click="reinitialiserFiltres"
             >
               Réinitialiser
@@ -429,7 +421,7 @@ const offers = ref([
                 <tr>
 
                   <th
-                    class="ps-4 py-3 text-muted text-uppercase fs-7 fw-black"
+                    class="ps-4 py-3 text-muted text- text-uppercase fs-7 fw-black"
                   >
                     PROGRAMME DE FORMATION
                   </th>
@@ -459,7 +451,7 @@ const offers = ref([
                   </th>
 
                   <th
-                    class="pe-4 text-end py-3 text-muted text-uppercase fs-7 fw-black t"
+                    class="py-3 text-muted text-uppercase fs-7 fw-black t"
                   >
                     ACTIONS
                   </th>
@@ -561,17 +553,15 @@ const offers = ref([
                   ========================== -->
 
                   <td class="py-3">
-
                     <span
                       class="badge px-3 py-2 rounded-pill fw-extrabold fs-7"
                       :style="{
-                        backgroundColor: campagne.statusBg || '#F3F4F6',
-                        color: campagne.statusColor || '#6B7280'
+                        backgroundColor: getStatutInfo(campagne.status).bg,
+                        color: getStatutInfo(campagne.status).color
                       }"
                     >
-                      {{ campagne.status || 'STATUT INCONNU' }}
+                      {{ getStatutInfo(campagne.status).label }}
                     </span>
-
                   </td>
 
 

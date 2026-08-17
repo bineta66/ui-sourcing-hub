@@ -190,9 +190,6 @@ const fermer = () => window.history.back()
           <section class="form-header">
             <div class="d-flex justify-content-between align-items-start">
               <h1 class="form-title">Modifier la campagne</h1>
-              <button type="button" class="close-button" @click="fermer">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
             </div>
 
             <div>
@@ -260,7 +257,6 @@ const fermer = () => window.history.back()
           </section>
 
           <section class="settings-section">
-            <h2 class="settings-title">Paramètres</h2>
 
             <div class="row g-3 mb-4">
               <div class="col-md-6">
@@ -482,6 +478,7 @@ const fermer = () => window.history.back()
   flex-direction: column;
   gap: 16px;
   border-bottom: 1px solid #E2E8F0;
+  background-color: #FAFAFA;
 }
 
 .form-title {
@@ -601,9 +598,9 @@ const fermer = () => window.history.back()
 }
 
 .criteria-title {
-  color: #1E293B;
+  color: #64748B;
   font-family: 'Inter', sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
 }
 
