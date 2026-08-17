@@ -600,6 +600,19 @@ const offers = ref([
                       </router-link>
 
 
+                      <!-- Formulaire -->
+
+                      <router-link
+                        :to="`/form-builder/${offer.id}`"
+                        class="btn btn-light btn-sm rounded-3 shadow-xs text-success"
+                        title="Créer un formulaire"
+                      >
+
+                        <i class="fa-solid fa-file-lines"></i>
+
+                      </router-link>
+
+
                       <!-- Supprimer -->
 
                       <button
