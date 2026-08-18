@@ -15,6 +15,7 @@ import CandidateEntretiens from '../views/candidate/CandidateEntretiens.vue'
 import CandidateTests from '../views/candidate/CandidateTests.vue'
 import CandidateCandidature from '../views/candidate/CandidateCandidature.vue'
 import CandidateProfile from '../views/candidate/Profile.vue'
+import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -46,37 +47,44 @@ const router = createRouter({
     {
       path: '/gestion-utilisateurs',
       name: 'GestionUtilisateurs',
-      component: GestionUtilisateurs
+      component: GestionUtilisateurs,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
       path: '/detail-utilisateur/:id',
       name: 'DetailUtilisateur',
-      component: DetailUtilisateur
+      component: DetailUtilisateur,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
       path: '/campagnes',
       name: 'campagnes',
-      component: Campagnes
+      component: Campagnes,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
       path: '/campagnes/create',
       name: 'create-campagne',
-      component: CreateCampagne
+      component: CreateCampagne,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
       path: '/campagnes/update/:id',
       name: 'update-campagne',
-      component: UpdateCampagne
+      component: UpdateCampagne,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
       path: '/campagnes/detail/:id',
       name: 'detail-campagne',
-      component: DetailCampagne
+      component: DetailCampagne,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
       path: '/form-builder/:campaignId?',
       name: 'campaign-form-builder',
-      component: FormBuilderView
+      component: FormBuilderView,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
       path: '/candidature/:slug',
@@ -104,6 +112,29 @@ const router = createRouter({
       component: CandidateProfile
     }
   ],
+})
+
+router.beforeEach(async (to, from) => {
+  const auth = useAuthStore()
+  const requiresAuth = to.meta.requiresAuth
+  const requiresAdmin = to.meta.requiresAdmin
+
+  if (requiresAuth && !auth.isAuthenticated) {
+    return '/login'
+  }
+
+  if (requiresAdmin && !auth.isAdmin) {
+    return '/login'
+  }
+
+  if (requiresAuth && auth.isAuthenticated) {
+    await auth.checkAuth()
+    if (requiresAdmin && !auth.isAdmin) {
+      return '/login'
+    }
+  }
+
+  return true
 })
 
 export default router

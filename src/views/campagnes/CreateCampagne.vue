@@ -76,6 +76,18 @@ const creerProjet = async () => {
     submitError.value = 'Le titre est obligatoire.'
     return
   }
+  if (!form.value.description.trim()) {
+    submitError.value = 'La description est obligatoire.'
+    return
+  }
+  if (!form.value.begin_date) {
+    submitError.value = 'La date de début est obligatoire.'
+    return
+  }
+  if (!form.value.end_date) {
+    submitError.value = 'La date de fin est obligatoire.'
+    return
+  }
   if (!form.value.referentiel_id) {
     submitError.value = 'Veuillez sélectionner un référentiel.'
     return
@@ -88,8 +100,19 @@ const creerProjet = async () => {
     await campagnesStore.creerCampagne(form.value)
     window.history.back()
   } catch (err) {
-    console.error('Erreur lors de la création de la campagne :', err.response?.data)
-    submitError.value = 'Une erreur est survenue lors de la création.'
+    const data = err.response?.data
+    if (data) {
+      const messages = Object.entries(data)
+        .map(([key, value]) => {
+          if (Array.isArray(value)) return `${key}: ${value.join(', ')}`
+          if (value && typeof value === 'object') return `${key}: ${JSON.stringify(value)}`
+          return `${key}: ${value}`
+        })
+        .join(' | ')
+      submitError.value = messages || 'Une erreur est survenue lors de la création.'
+    } else {
+      submitError.value = err.message || 'Une erreur est survenue lors de la création.'
+    }
   } finally {
     isSubmitting.value = false
   }
@@ -97,6 +120,10 @@ const creerProjet = async () => {
 
 const handleViewChange = (newView) => {
   currentView.value = newView
+}
+
+const handleLogout = () => {
+  window.location.href = '/login'
 }
 
 const annuler = () => window.history.back()
@@ -298,12 +325,12 @@ const fermer = () => window.history.back()
               <button type="button" class="btn btn-cancel" @click="annuler">
                 Annuler
               </button>
-            </div>
+             </div>
 
-          </section>
+           </section>
 
-        </div>
-      </main>
+         </div>
+       </main>
 
     </div>
 

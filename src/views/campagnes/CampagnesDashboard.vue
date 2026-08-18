@@ -1,17 +1,20 @@
 <!-- views/OffreDashboard.vue -->
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import Sidebar from '@/components/Sidebar.vue'
 import DeleteCampagne from '@/components/DeleteCampagne.vue'
-import { onMounted } from 'vue'
 import { useCampagnesStore } from '@/stores/campagnes'
+import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+import { deleteCampagne } from '@/api/endpoints/campagnes'
 
-// Récupération des campagnes depuis le store
+const router = useRouter()
 const campagnesStore = useCampagnesStore()
+const auth = useAuthStore()
+
 onMounted(async () => {
   await campagnesStore.fetchCampagnes()
-  console.log(campagnesStore.items) 
 })
 
 // Valeurs sélectionnées dans les deux <select> de filtre
@@ -71,9 +74,7 @@ const campagneBrouillon = computed(() =>
 
 
 const showDeleteModal = ref(false)
-
 const campagneASupprimer = ref(null)
-
 const suppressionEnCours = ref(false)
 
 // Fonction pour ouvrir le modal de suppression
@@ -118,13 +119,11 @@ const currentView = ref('campagnes')
 
 const handleViewChange = (newView) => {
   currentView.value = newView
-
-  // Logique de navigation / redirection si nécessaire
-  console.log('Navigation vers :', newView)
 }
 
 const handleLogout = () => {
-  console.log("Déconnexion de l'utilisateur")
+  auth.logout()
+  router.push('/login')
 }
 
 // Données fictives pour le tableau des offres
@@ -211,11 +210,11 @@ const getStatutInfo = (status) => {
             <div class="user-information">
 
               <div class="user-name">
-                Ndeye
+                {{ auth.user?.first_name || auth.user?.username || 'Utilisateur' }}
               </div>
 
               <div class="user-role">
-                HR SUPERVISOR
+                {{ auth.user?.is_admin ? 'ADMIN' : 'UTILISATEUR' }}
               </div>
 
             </div>
@@ -596,7 +595,7 @@ const getStatutInfo = (status) => {
                       <!-- Formulaire -->
 
                       <router-link
-                        :to="`/form-builder/${offer.id}`"
+                        :to="`/form-builder/${campagne.id}`"
                         class="btn btn-light btn-sm rounded-3 shadow-xs text-success"
                         title="Créer un formulaire"
                       >
@@ -828,7 +827,7 @@ const getStatutInfo = (status) => {
 
   min-width: 0;
 
-  background-color: #F8FAFC;
+  background-color: #ffffff;
 }
 
 
@@ -944,7 +943,7 @@ const getStatutInfo = (status) => {
 
   padding: 32px;
 
-  background-color: #F8FAFC;
+  background-color: #FFFFFF;
 }
 
 

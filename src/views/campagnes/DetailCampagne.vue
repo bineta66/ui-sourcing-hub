@@ -6,7 +6,7 @@ import { useRoute } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import { useCampagnesStore } from '@/stores/campagnes'
 
-const route = useRoute() // permet de lire l'id présent dans l'URL (/campagnes/detail/:id)
+const route = useRoute()
 const campagnesStore = useCampagnesStore()
 
 const currentView = ref('campagnes')
@@ -16,11 +16,9 @@ const handleViewChange = (newView) => {
 }
 
 const handleLogout = () => {
-  console.log('Déconnexion de l’utilisateur')
+  window.location.href = '/login'
 }
 
-// Au montage : on récupère l'id depuis l'URL et on va chercher
-// les vraies données de cette campagne via l'API
 onMounted(() => {
   campagnesStore.fetchCampagneById(route.params.id)
 })
@@ -111,7 +109,13 @@ onMounted(() => {
            TITRE
       ========================== -->
 
-      <main class="detail-page">
+      <main class="detail-page" v-if="!loading">
+
+        <div v-if="errorMessage" class="alert alert-danger">
+          {{ errorMessage }}
+        </div>
+
+        <div v-else>
 
         <div
           class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 gap-3"
@@ -367,17 +371,16 @@ onMounted(() => {
 
         </div>
 
+        </div>
+
       </main>
 
     </div>
 
   </div>
-
 </template>
 
-
 <style scoped>
-
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css');
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap');

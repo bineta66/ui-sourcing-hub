@@ -8,15 +8,14 @@ import { useCampagnesStore } from '@/stores/campagnes'
 import { useCriteresStore } from '@/stores/criteres'
 import { useReferentielsStore } from '@/stores/referentiels'
 
-const route = useRoute() // permet de lire l'id de la campagne dans l'URL (/campagnes/update/:id)
+const route = useRoute()
 const campagnesStore = useCampagnesStore()
 const criteresStore = useCriteresStore()
 const referentielsStore = useReferentielsStore()
 
+const campagneId = route.params.id
 const currentView = ref('campagnes')
 
-// Même structure que le formulaire de création
-// -> reste vide au départ, sera rempli au montage par préremplirFormulaire()
 const form = ref({
   title: '',
   description: '',
@@ -32,29 +31,19 @@ const showModalReferentiel = ref(false)
 
 const isSubmitting = ref(false)
 const submitError = ref(null)
-const isLoading = ref(true) // le temps que la campagne + listes soient chargées
+const isLoading = ref(true)
 
-// Récupère l'id une seule fois (utile pour la soumission finale)
-const campagneId = route.params.id
-
-// Transforme les données renvoyées par l'API (objets imbriqués)
-// en un formulaire utilisable par les <select>/checkboxes (ids simples)
 const preremplirFormulaire = (campagne) => {
   form.value.title = campagne.title
   form.value.description = campagne.description
   form.value.begin_date = campagne.begin_date
   form.value.end_date = campagne.end_date
   form.value.status = campagne.status
-
-  // referentiel arrive comme un objet { id, title, description } en lecture -> on garde juste l'id
   form.value.referentiel_id = campagne.referentiel?.id ?? null
-
-  // criteres arrive comme un tableau d'objets [{ id, name, ... }] -> on garde juste les ids
   form.value.criteres_ids = (campagne.criteres || []).map((c) => c.id)
 }
 
 onMounted(async () => {
-  // On charge en parallèle : la campagne à modifier + les listes de critères/référentiels
   await Promise.all([
     campagnesStore.fetchCampagneById(campagneId),
     criteresStore.fetchCriteres(),
@@ -68,7 +57,6 @@ onMounted(async () => {
   isLoading.value = false
 })
 
-// Coche/décoche un critère (identique à la création)
 const toggleCritere = (id) => {
   const index = form.value.criteres_ids.indexOf(id)
   if (index === -1) {
@@ -98,7 +86,6 @@ const handleCreateReferentiel = async (nouveauReferentiel) => {
   }
 }
 
-// Soumission finale -> update au lieu de create
 const modifierProjet = async () => {
   if (!form.value.title.trim()) {
     submitError.value = 'Le titre est obligatoire.'
@@ -125,6 +112,10 @@ const modifierProjet = async () => {
 
 const handleViewChange = (newView) => {
   currentView.value = newView
+}
+
+const handleLogout = () => {
+  window.location.href = '/login'
 }
 
 const annuler = () => window.history.back()
@@ -179,7 +170,6 @@ const fermer = () => window.history.back()
         </div>
       </header>
 
-      <!-- Pendant le chargement de la campagne, on affiche un message simple -->
       <main v-if="isLoading" class="form-page">
         <p class="text-muted">Chargement de la campagne...</p>
       </main>
@@ -358,7 +348,6 @@ const fermer = () => window.history.back()
 </template>
 
 <style scoped>
-/* === identique au style de CreateCampagne.vue, inchangé === */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap');
 
 .app-layout {
@@ -590,7 +579,6 @@ const fermer = () => window.history.back()
   top: 50%;
   transform: translateY(-50%);
   color: #64748B;
-  z-index: 2;
 }
 
 .date-input {
@@ -598,116 +586,83 @@ const fermer = () => window.history.back()
 }
 
 .criteria-title {
-  color: #64748B;
+  color: #1E293B;
   font-family: 'Inter', sans-serif;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-}
-
-.add-criteria-button {
-  padding: 0;
-  color: #0F766E;
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.add-criteria-button:hover {
-  color: #0A5C57;
 }
 
 .criteria-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .criterion-card {
-  padding: 12px;
-  background-color: white;
+  padding: 10px 12px;
+  background-color: #F8FAFC;
   border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  border-radius: 10px;
 }
 
 .criterion-name {
-  padding: 6px 0;
-  color: #1E293B;
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
+  color: #00313C;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .criterion-description {
-  padding: 0 0 4px;
   color: #64748B;
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.add-criteria-button {
+  color: #D20C4F;
+  font-weight: 700;
+  font-size: 13px;
 }
 
 .form-actions {
-  padding-top: 16px;
   display: flex;
-  align-items: center;
   gap: 12px;
+  margin-top: 24px;
 }
 
 .btn-create {
-  padding: 8px 20px;
   background-color: #D20C4F;
-  border: none;
-  border-radius: 6px;
   color: white;
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
 }
 
-.btn-create:hover {
+.btn-create:hover:not(:disabled) {
   background-color: #B00A42;
   color: white;
 }
 
-.btn-create:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .btn-cancel {
-  padding: 8px 16px;
-  background-color: transparent;
-  border: none;
-  border-radius: 6px;
-  color: #1E293B;
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
+  background-color: white;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
 }
 
-.btn-cancel:hover {
-  background-color: #E2E8F0;
+.btn-cancel:hover:not(:disabled) {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+  color: #00313C;
 }
 
-@media (max-width: 768px) {
-  .topbar {
-    padding: 0 16px;
-  }
-  .user-information {
-    display: none;
-  }
-  .form-page {
-    padding: 24px 12px;
-  }
-  .form-header,
-  .settings-section {
-    padding: 20px;
-  }
-  .form-title {
-    font-size: 18px;
-  }
+.btn-create:disabled,
+.btn-cancel:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 </style>

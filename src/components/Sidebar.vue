@@ -9,7 +9,7 @@ defineProps({
   }
 })
 
-const emit = defineEmits(['logout'])
+const emit = defineEmits(['changeView', 'logout'])
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', to: '/campagnes' },
