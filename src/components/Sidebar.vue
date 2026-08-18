@@ -10,7 +10,7 @@ defineProps({
   }
 })
 
-const emit = defineEmits(['logout'])
+const emit = defineEmits(['changeView', 'logout'])
 const router = useRouter()
 const authStore = useAuthStore()
 

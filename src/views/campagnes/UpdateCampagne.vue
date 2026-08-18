@@ -1,127 +1,155 @@
-<!-- views/ModifierCampagne.vue -->
-
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
+import ModalCreation from '@/components/ModalCreation.vue'
 
-// Vue active dans la sidebar
+import { useCampagnesStore } from '@/stores/campagnes'
+import { useCriteresStore } from '@/stores/criteres'
+import { useReferentielsStore } from '@/stores/referentiels'
+
+const route = useRoute()
+const campagnesStore = useCampagnesStore()
+const criteresStore = useCriteresStore()
+const referentielsStore = useReferentielsStore()
+
+const campagneId = route.params.id
 const currentView = ref('campagnes')
 
-// Données du formulaire
 const form = ref({
-  nom: 'Introduction à l’infrastructure cloud',
-  description:
-    'Fondamentaux des modèles d’architecture AWS et Azure pour débutants...',
-  referentiel: 'Standard de l’entreprise',
-  dateDebut: '2026-10-24',
-  dateFin: '2026-11-12',
-  statut: 'À VENIR'
+  title: '',
+  description: '',
+  begin_date: '',
+  end_date: '',
+  status: 'brouillon',
+  referentiel_id: null,
+  criteres_ids: []
 })
 
-// Critères d'évaluation
-const criteres = ref([
-  {
-    id: 1,
-    nom: 'Nom',
-    description: 'Respect des standards de développement'
-  },
-  {
-    id: 2,
-    nom: 'Description',
-    description: ''
-  }
-])
+const showModalCritere = ref(false)
+const showModalReferentiel = ref(false)
 
-// Gestion de la navigation de la sidebar
+const isSubmitting = ref(false)
+const submitError = ref(null)
+const isLoading = ref(true)
+
+const preremplirFormulaire = (campagne) => {
+  form.value.title = campagne.title
+  form.value.description = campagne.description
+  form.value.begin_date = campagne.begin_date
+  form.value.end_date = campagne.end_date
+  form.value.status = campagne.status
+  form.value.referentiel_id = campagne.referentiel?.id ?? null
+  form.value.criteres_ids = (campagne.criteres || []).map((c) => c.id)
+}
+
+onMounted(async () => {
+  await Promise.all([
+    campagnesStore.fetchCampagneById(campagneId),
+    criteresStore.fetchCriteres(),
+    referentielsStore.fetchReferentiels()
+  ])
+
+  if (campagnesStore.campagneActive) {
+    preremplirFormulaire(campagnesStore.campagneActive)
+  }
+
+  isLoading.value = false
+})
+
+const toggleCritere = (id) => {
+  const index = form.value.criteres_ids.indexOf(id)
+  if (index === -1) {
+    form.value.criteres_ids.push(id)
+  } else {
+    form.value.criteres_ids.splice(index, 1)
+  }
+}
+
+const handleCreateCritere = async (nouveauCritere) => {
+  try {
+    const critere = await criteresStore.ajouterCritere(nouveauCritere)
+    showModalCritere.value = false
+    form.value.criteres_ids.push(critere.id)
+  } catch (err) {
+    console.error('Erreur lors de la création du critère :', err)
+  }
+}
+
+const handleCreateReferentiel = async (nouveauReferentiel) => {
+  try {
+    const referentiel = await referentielsStore.ajouterReferentiel(nouveauReferentiel)
+    showModalReferentiel.value = false
+    form.value.referentiel_id = referentiel.id
+  } catch (err) {
+    console.error('Erreur lors de la création du référentiel :', err)
+  }
+}
+
+const modifierProjet = async () => {
+  if (!form.value.title.trim()) {
+    submitError.value = 'Le titre est obligatoire.'
+    return
+  }
+  if (!form.value.referentiel_id) {
+    submitError.value = 'Veuillez sélectionner un référentiel.'
+    return
+  }
+
+  isSubmitting.value = true
+  submitError.value = null
+
+  try {
+    await campagnesStore.modifierCampagne(campagneId, form.value)
+    window.history.back()
+  } catch (err) {
+    console.error('Erreur lors de la modification de la campagne :', err.response?.data)
+    submitError.value = 'Une erreur est survenue lors de la modification.'
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
 const handleViewChange = (newView) => {
   currentView.value = newView
 }
 
-// Déconnexion
 const handleLogout = () => {
-  console.log('Déconnexion')
+  window.location.href = '/login'
 }
 
-// Ajouter un critère
-const ajouterCritere = () => {
-  criteres.value.push({
-    id: Date.now(),
-    nom: '',
-    description: ''
-  })
-}
-
-// Supprimer un critère
-const supprimerCritere = (id) => {
-  criteres.value = criteres.value.filter(
-    (critere) => critere.id !== id
-  )
-}
-
-// Modifier le projet
-const modifierProjet = () => {
-  console.log('Projet modifié :', {
-    ...form.value,
-    criteres: criteres.value
-  })
-}
-
-// Annuler
-const annuler = () => {
-  window.history.back()
-}
-
-// Fermer
-const fermer = () => {
-  window.history.back()
-}
+const annuler = () => window.history.back()
+const fermer = () => window.history.back()
 </script>
 
 <template>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+
   <div class="app-layout">
 
-    <!-- =========================
-         SIDEBAR
-    ========================== -->
     <Sidebar
       :active-view="currentView"
       @change-view="handleViewChange"
       @logout="handleLogout"
     />
 
-    <!-- =========================
-         CONTENU PRINCIPAL
-    ========================== -->
     <div class="main-content">
 
-      <!-- =========================
-           TOPBAR
-      ========================== -->
       <header class="topbar">
-
         <div class="d-flex align-items-center gap-3">
-
-          <button
-            type="button"
-            class="btn btn-link text-secondary p-0 back-button"
-            @click="annuler"
-          >
+          <button type="button" class="btn btn-link text-secondary p-0 back-button" @click="annuler">
             <i class="fa-solid fa-arrow-left"></i>
           </button>
-
-          <span class="page-label">
-            Modifier
-          </span>
-
+          <span class="page-label">Formulaire</span>
         </div>
 
-        <!-- Profil -->
         <div class="d-flex align-items-center gap-3">
-
-          <button
-            type="button"
-            class="notification-button"
-          >
+          <button type="button" class="notification-button">
             <i class="fa-regular fa-bell"></i>
             <span class="notification-dot"></span>
           </button>
@@ -129,342 +157,198 @@ const fermer = () => {
           <div class="separator"></div>
 
           <div class="d-flex align-items-center gap-3">
-
             <div class="user-information">
-              <div class="user-name">
-                Ndeye
-              </div>
-
-              <div class="user-role">
-                HR SUPERVISOR
-              </div>
+              <div class="user-name">Ndeye</div>
+              <div class="user-role">HR SUPERVISOR</div>
             </div>
-
             <img
               src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=100&auto=format&fit=crop"
               alt="Avatar de Ndeye"
               class="user-avatar"
             />
-
           </div>
-
         </div>
-
       </header>
 
-      <!-- =========================
-           FORMULAIRE
-      ========================== -->
-      <main class="form-page">
+      <main v-if="isLoading" class="form-page">
+        <p class="text-muted">Chargement de la campagne...</p>
+      </main>
 
+      <main v-else class="form-page">
         <div class="form-card">
 
-          <!-- =========================
-               INFORMATIONS GENERALES
-          ========================== -->
           <section class="form-header">
-
             <div class="d-flex justify-content-between align-items-start">
-
-              <h1 class="form-title">
-                Modifier le projet
-              </h1>
-
-              <button
-                type="button"
-                class="close-button"
-                @click="fermer"
-              >
-                <i class="fa-solid fa-xmark"></i>
-              </button>
-
+              <h1 class="form-title">Modifier la campagne</h1>
             </div>
 
-            <!-- Nom -->
             <div>
-
-              <label class="custom-label">
-                Nom du projet
-              </label>
-
               <input
-                v-model="form.nom"
+                v-model="form.title"
                 type="text"
                 class="form-control custom-input"
+                placeholder="Titre de la campagne"
               />
-
             </div>
 
-            <!-- Description -->
             <div>
-
-              <label class="custom-label">
-                Description
-              </label>
-
+              <label class="custom-label">Description</label>
               <textarea
                 v-model="form.description"
                 class="form-control custom-textarea"
                 placeholder="Ajoutez une description détaillée..."
                 rows="4"
               ></textarea>
-
             </div>
 
-            <!-- Référentiel -->
             <div>
-
-              <label class="custom-label d-flex align-items-center gap-1">
-
-                Référentiel
-
-                <i
-                  class="fa-regular fa-circle-question"
-                  title="Référentiel utilisé pour le projet"
-                ></i>
-
-              </label>
-
-              <div class="position-relative">
-
-                <i class="fa-solid fa-book reference-icon"></i>
-
-                <select
-                  v-model="form.referentiel"
-                  class="form-select custom-input reference-select"
-                >
-
-                  <option>
-                    Standard de l’entreprise
-                  </option>
-
-                  <option>
-                    Standard ISO
-                  </option>
-
-                  <option>
-                    Standard interne
-                  </option>
-
-                </select>
-
-              </div>
-
-            </div>
-
-          </section>
-
-          <!-- =========================
-               PARAMETRES
-          ========================== -->
-          <section class="settings-section">
-
-            <h2 class="settings-title">
-              Paramètres
-            </h2>
-
-            <!-- Dates -->
-            <div class="row g-3 mb-4">
-
-              <!-- Date début -->
-              <div class="col-md-6">
-
-                <label class="custom-label">
-                  Date de début
-                </label>
-
-                <div class="position-relative">
-
-                  <i
-                    class="fa-regular fa-calendar calendar-icon"
-                  ></i>
-
-                  <input
-                    v-model="form.dateDebut"
-                    type="date"
-                    class="form-control custom-input date-input"
-                  />
-
-                </div>
-
-              </div>
-
-              <!-- Date fin -->
-              <div class="col-md-6">
-
-                <label class="custom-label">
-                  Date de fin
-                </label>
-
-                <div class="position-relative">
-
-                  <i
-                    class="fa-regular fa-calendar calendar-icon"
-                  ></i>
-
-                  <input
-                    v-model="form.dateFin"
-                    type="date"
-                    class="form-control custom-input date-input"
-                  />
-
-                </div>
-
-              </div>
-
-            </div>
-
-            <!-- =========================
-                 STATUT
-            ========================== -->
-            <div class="mb-4">
-
-              <label class="custom-label">
-                Statut
-              </label>
-
-              <select
-                v-model="form.statut"
-                class="form-select custom-input"
-              >
-
-                <option value="À VENIR">
-                  À VENIR
-                </option>
-
-                <option value="EN PROGRESSION">
-                  EN PROGRESSION
-                </option>
-
-                <option value="PASSÉ">
-                  PASSÉ
-                </option>
-
+              <label class="custom-label">Statut</label>
+              <select v-model="form.status" class="form-select custom-input">
+                <option value="brouillon">Brouillon</option>
+                <option value="publiee">Publiée</option>
+                <option value="cloturee">Clôturée</option>
               </select>
-
             </div>
 
-            <!-- =========================
-                 CRITERES
-            ========================== -->
+            <hr class="form-divider" />
+
             <div>
+              <label class="custom-label d-flex align-items-center gap-1">
+                Référentiel
+                <i class="fa-regular fa-circle-question" title="Référentiel utilisé pour le projet"></i>
+              </label>
 
-              <div
-                class="d-flex justify-content-between align-items-center mb-3"
-              >
+              <div class="d-flex gap-2">
+                <div class="position-relative flex-grow-1">
+                  <i class="fa-solid fa-book reference-icon"></i>
 
-                <div class="d-flex align-items-center gap-2">
-
-                  <h3 class="criteria-title mb-0">
-                    Critères d'évaluation
-                  </h3>
-
-                  <i
-                    class="fa-regular fa-circle-question text-secondary"
-                  ></i>
-
+                  <select v-model="form.referentiel_id" class="form-select custom-input reference-select">
+                    <option :value="null" disabled>Sélectionner un référentiel</option>
+                    <option
+                      v-for="ref in referentielsStore.items"
+                      :key="ref.id"
+                      :value="ref.id"
+                    >
+                      {{ ref.title }}
+                    </option>
+                  </select>
                 </div>
 
                 <button
                   type="button"
                   class="btn btn-link add-criteria-button"
-                  @click="ajouterCritere"
+                  @click="showModalReferentiel = true"
                 >
+                  <i class="fa-solid fa-plus"></i>
+                </button>
+              </div>
+            </div>
+
+          </section>
+
+          <section class="settings-section">
+
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="custom-label">Date de début</label>
+                <div class="position-relative">
+                  <i class="fa-regular fa-calendar calendar-icon"></i>
+                  <input v-model="form.begin_date" type="date" class="form-control custom-input date-input" />
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="custom-label">Date de fin</label>
+                <div class="position-relative">
+                  <i class="fa-regular fa-calendar calendar-icon"></i>
+                  <input v-model="form.end_date" type="date" class="form-control custom-input date-input" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                  <h3 class="criteria-title mb-0">Critères d'évaluation</h3>
+                  <i class="fa-regular fa-circle-question text-secondary" title="Critères utilisés pour évaluer la campagne"></i>
+                </div>
+
+                <button type="button" class="btn btn-link add-criteria-button" @click="showModalCritere = true">
                   <i class="fa-solid fa-plus"></i>
                   Ajouter
                 </button>
-
               </div>
 
-              <!-- Liste des critères -->
               <div class="criteria-list">
-
-                <div
-                  v-for="critere in criteres"
+                <label
+                  v-for="critere in criteresStore.items"
                   :key="critere.id"
-                  class="criterion-card"
+                  class="criterion-card d-flex align-items-start gap-3"
+                  style="cursor: pointer;"
                 >
+                  <input
+                    type="checkbox"
+                    :checked="form.criteres_ids.includes(critere.id)"
+                    @change="toggleCritere(critere.id)"
+                  />
 
-                  <div class="d-flex align-items-start gap-3">
-
-                    <div class="flex-grow-1">
-
-                      <input
-                        v-model="critere.nom"
-                        type="text"
-                        class="form-control criterion-name"
-                        placeholder="Nom"
-                      />
-
-                    </div>
-
-                    <button
-                      type="button"
-                      class="delete-button"
-                      @click="supprimerCritere(critere.id)"
-                    >
-                      <i class="fa-regular fa-trash-can"></i>
-                    </button>
-
+                  <div class="flex-grow-1">
+                    <div class="criterion-name">{{ critere.name }}</div>
+                    <div class="criterion-description">{{ critere.description }}</div>
                   </div>
-
-                  <textarea
-                    v-model="critere.description"
-                    class="form-control criterion-description"
-                    placeholder="Description brève du critère..."
-                    rows="1"
-                  ></textarea>
-
-                </div>
-
+                </label>
               </div>
-
             </div>
 
-            <!-- =========================
-                 BOUTONS
-            ========================== -->
-            <div class="form-actions">
+            <div v-if="submitError" class="text-danger mt-3" style="font-size: 13px;">
+              {{ submitError }}
+            </div>
 
+            <div class="form-actions">
               <button
                 type="button"
                 class="btn btn-create"
+                :disabled="isSubmitting"
                 @click="modifierProjet"
               >
-                Modifier
+                {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer les modifications' }}
               </button>
 
-              <button
-                type="button"
-                class="btn btn-cancel"
-                @click="annuler"
-              >
+              <button type="button" class="btn btn-cancel" @click="annuler">
                 Annuler
               </button>
-
             </div>
 
           </section>
 
         </div>
-
       </main>
 
     </div>
+
+    <ModalCreation
+      v-if="showModalCritere"
+      titre="Ajouter un critère"
+      champ-key="name"
+      champ-label="Nom"
+      @create="handleCreateCritere"
+      @close="showModalCritere = false"
+    />
+
+    <ModalCreation
+      v-if="showModalReferentiel"
+      titre="Ajouter un référentiel"
+      champ-key="title"
+      champ-label="Titre"
+      @create="handleCreateReferentiel"
+      @close="showModalReferentiel = false"
+    />
 
   </div>
 </template>
 
 <style scoped>
-
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css');
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap');
-
-
-/* =========================================
-   LAYOUT
-========================================= */
 
 .app-layout {
   min-height: 100vh;
@@ -479,23 +363,14 @@ const fermer = () => {
   background-color: #ffffff;
 }
 
-
-/* =========================================
-   TOPBAR
-========================================= */
-
 .topbar {
   height: 72px;
   padding: 0 32px;
-
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   background-color: #ffffff;
-
   border-bottom: 1px solid #E2E8F0;
-
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
@@ -517,31 +392,23 @@ const fermer = () => {
 .notification-button {
   width: 40px;
   height: 40px;
-
   position: relative;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   background-color: white;
-
   border: 1px solid #E2E8F0;
   border-radius: 12px;
-
   color: #64748B;
 }
 
 .notification-dot {
   width: 8px;
   height: 8px;
-
   position: absolute;
   top: 7px;
   right: 7px;
-
   background-color: #D20C4F;
-
   border: 2px solid white;
   border-radius: 50%;
 }
@@ -549,7 +416,6 @@ const fermer = () => {
 .separator {
   width: 1px;
   height: 32px;
-
   background-color: #E2E8F0;
 }
 
@@ -572,26 +438,15 @@ const fermer = () => {
 .user-avatar {
   width: 40px;
   height: 40px;
-
   object-fit: cover;
-
   border-radius: 12px;
-
   box-shadow: 0 0 0 4px #F9FAFB;
 }
 
-
-/* =========================================
-   FORMULAIRE
-========================================= */
-
 .form-page {
   min-height: calc(100vh - 72px);
-
   padding: 55px 24px;
-
   background-color: #ffffff;
-
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -600,36 +455,24 @@ const fermer = () => {
 .form-card {
   width: 100%;
   max-width: 800px;
-
   background-color: white;
-
   border-radius: 12px;
-
   overflow: hidden;
-
   box-shadow: 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-
-/* =========================================
-   HEADER FORMULAIRE
-========================================= */
-
 .form-header {
   padding: 24px;
-
   display: flex;
   flex-direction: column;
   gap: 16px;
-
   border-bottom: 1px solid #E2E8F0;
+  background-color: #FAFAFA;
 }
 
 .form-title {
   margin: 0;
-
   color: #1E293B;
-
   font-family: 'Inter', sans-serif;
   font-size: 20px;
   font-weight: 600;
@@ -639,11 +482,8 @@ const fermer = () => {
 .close-button {
   border: none;
   background: transparent;
-
   color: #64748B;
-
   font-size: 18px;
-
   cursor: pointer;
 }
 
@@ -651,318 +491,178 @@ const fermer = () => {
   color: #D20C4F;
 }
 
-
-/* =========================================
-   LABELS
-========================================= */
-
 .custom-label {
   display: block;
-
   margin-bottom: 6px;
-
   color: #64748B;
-
   font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 500;
 }
 
-
-/* =========================================
-   INPUTS
-========================================= */
-
 .custom-input {
   min-height: 40px;
-
   padding: 8px 16px;
-
   background-color: #F1F5F9;
-
   border: 1px solid transparent;
   border-radius: 8px;
-
   color: #1E293B;
-
   font-family: 'Inter', sans-serif;
   font-size: 14px;
 }
 
 .custom-input:focus {
   background-color: #F1F5F9;
-
   border-color: #D20C4F;
-
   box-shadow: 0 0 0 0.2rem rgba(210, 12, 79, 0.08);
 }
 
-
-/* =========================================
-   TEXTAREA
-========================================= */
+.custom-input::placeholder {
+  color: #9CA3AF;
+}
 
 .custom-textarea {
   min-height: 94px;
-
   padding: 10px 16px;
-
   background-color: #F1F5F9;
-
   border: 1px solid transparent;
   border-radius: 8px;
-
   resize: vertical;
-
   color: #1E293B;
-
   font-family: 'Inter', sans-serif;
   font-size: 14px;
 }
 
 .custom-textarea:focus {
   background-color: #F1F5F9;
-
   border-color: #D20C4F;
-
   box-shadow: 0 0 0 0.2rem rgba(210, 12, 79, 0.08);
 }
 
-
-/* =========================================
-   REFERENTIEL
-========================================= */
+.form-divider {
+  margin: 8px 0 6px;
+  border: 0;
+  border-top: 1px solid #E2E8F0;
+  opacity: 1;
+}
 
 .reference-icon {
   position: absolute;
-
   left: 16px;
   top: 50%;
-
   transform: translateY(-50%);
-
   color: #64748B;
-
   z-index: 2;
 }
 
 .reference-select {
   padding-left: 40px;
+  cursor: pointer;
 }
-
-
-/* =========================================
-   PARAMETRES
-========================================= */
 
 .settings-section {
   padding: 24px;
-
   background-color: #FAFAFA;
 }
 
 .settings-title {
   margin: 0 0 24px;
-
   color: #1E293B;
-
   font-family: 'Inter', sans-serif;
   font-size: 18px;
   font-weight: 600;
 }
 
-
-/* =========================================
-   DATES
-========================================= */
-
 .calendar-icon {
   position: absolute;
-
   left: 12px;
   top: 50%;
-
   transform: translateY(-50%);
-
   color: #64748B;
-
-  z-index: 2;
 }
 
 .date-input {
   padding-left: 36px;
 }
 
-
-/* =========================================
-   CRITERES
-========================================= */
-
 .criteria-title {
   color: #1E293B;
-
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 600;
 }
 
-.add-criteria-button {
-  padding: 0;
-
-  color: #0F766E;
-
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-
-  text-decoration: none;
-}
-
 .criteria-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .criterion-card {
-  padding: 12px;
-
-  background-color: white;
-
+  padding: 10px 12px;
+  background-color: #F8FAFC;
   border: 1px solid #E2E8F0;
-  border-radius: 8px;
-
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  border-radius: 10px;
 }
 
 .criterion-name {
-  min-height: 34px;
-
-  padding: 6px 12px;
-
-  background-color: #F1F5F9;
-
-  border: none;
-  border-radius: 4px;
-
-  color: #1E293B;
-
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
+  color: #00313C;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .criterion-description {
-  padding: 4px;
-
-  border: none;
-
-  background-color: transparent;
-
   color: #64748B;
-
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
-
-  resize: none;
-}
-
-.delete-button {
-  padding: 8px 6px;
-
-  border: none;
-  background: transparent;
-
-  color: #64748B;
-
-  cursor: pointer;
-}
-
-.delete-button:hover {
-  color: #DC2626;
-}
-
-
-/* =========================================
-   BOUTONS
-========================================= */
-
-.form-actions {
-  padding-top: 16px;
-
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.btn-create {
-  padding: 8px 20px;
-
-  background-color: #D20C4F;
-
-  border: none;
-  border-radius: 6px;
-
-  color: white;
-
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 500;
 }
 
-.btn-create:hover {
+.add-criteria-button {
+  color: #D20C4F;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-create {
+  background-color: #D20C4F;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.btn-create:hover:not(:disabled) {
   background-color: #B00A42;
   color: white;
 }
 
 .btn-cancel {
-  padding: 8px 16px;
-
-  background-color: transparent;
-
-  border: none;
-  border-radius: 6px;
-
-  color: #1E293B;
-
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
+  background-color: white;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
 }
 
-.btn-cancel:hover {
-  background-color: #E2E8F0;
+.btn-cancel:hover:not(:disabled) {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+  color: #00313C;
 }
 
-
-/* =========================================
-   RESPONSIVE
-========================================= */
-
-@media (max-width: 768px) {
-
-  .topbar {
-    padding: 0 16px;
-  }
-
-  .user-information {
-    display: none;
-  }
-
-  .form-page {
-    padding: 24px 12px;
-  }
-
-  .form-header,
-  .settings-section {
-    padding: 20px;
-  }
-
-  .form-title {
-    font-size: 18px;
-  }
+.btn-create:disabled,
+.btn-cancel:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
-
 </style>
