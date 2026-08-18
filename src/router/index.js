@@ -27,26 +27,22 @@ const router = createRouter({
     {
       path: '/login',
       name: 'Login',
-      component: Login,
-      meta: { requiresGuest: true }
+      component: Login
     },
     {
       path: '/inscription',
       name: 'Inscription',
-      component: Inscription,
-      meta: { requiresGuest: true }
+      component: Inscription
     },
     {
       path: '/mot-de-passe-oublie',
       name: 'MotDePasseOublie',
-      component: MotDePasseOublie,
-      meta: { requiresGuest: true }
+      component: MotDePasseOublie
     },
     {
       path: '/creation-utilisateur',
       name: 'CreationUtilisateur',
-      component: CreationUtilisateur,
-      meta: { requiresGuest: true }
+      component: CreationUtilisateur
     },
     {
       path: '/gestion-utilisateurs',
@@ -122,24 +118,19 @@ router.beforeEach(async (to, from) => {
   const auth = useAuthStore()
   const requiresAuth = to.meta.requiresAuth
   const requiresAdmin = to.meta.requiresAdmin
-  const requiresGuest = to.meta.requiresGuest
 
   if (requiresAuth && !auth.isAuthenticated) {
     return '/login'
   }
 
   if (requiresAdmin && !auth.isAdmin) {
-    return '/campagnes'
-  }
-
-  if (requiresGuest && auth.isAuthenticated) {
-    return '/campagnes'
+    return '/login'
   }
 
   if (requiresAuth && auth.isAuthenticated) {
     await auth.checkAuth()
     if (requiresAdmin && !auth.isAdmin) {
-      return '/campagnes'
+      return '/login'
     }
   }
 

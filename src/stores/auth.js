@@ -3,9 +3,15 @@ import { ref, computed } from 'vue'
 import api from '@/api/axios'
 
 export const useAuthStore = defineStore('auth', () => {
+  let storedUser = null
+  try {
+    storedUser = JSON.parse(localStorage.getItem('auth_user') || 'null')
+  } catch (e) {
+    storedUser = null
+  }
   const access = ref(localStorage.getItem('auth_access'))
   const refresh = ref(localStorage.getItem('auth_refresh'))
-  const user = ref(JSON.parse(localStorage.getItem('auth_user') || 'null'))
+  const user = ref(storedUser)
   const loading = ref(false)
   const error = ref(null)
 

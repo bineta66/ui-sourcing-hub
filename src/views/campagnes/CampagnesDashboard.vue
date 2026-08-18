@@ -1,7 +1,7 @@
 <!-- views/OffreDashboard.vue -->
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import Sidebar from '@/components/Sidebar.vue'
 import DeleteCampagne from '@/components/DeleteCampagne.vue'
 import { useCampagnesStore } from '@/stores/campagnes'
@@ -17,9 +17,104 @@ onMounted(async () => {
   await campagnesStore.fetchCampagnes()
 })
 
+// Valeurs sélectionnées dans les deux <select> de filtre
+const filtreProgramme = ref('') // '' = "Tous les programmes"
+const filtreStatut = ref('')    // '' = "Tous les statuts"
+
+// Liste unique des titres de campagnes, pour remplir dynamiquement
+// le <select> "Nom de programme" (au lieu d'options codées en dur)
+const programmesDisponibles = computed(() => {
+  const titres = campagnesStore.items.map((c) => c.title)
+  return [...new Set(titres)] // Set retire les doublons
+})
+
+// Liste des campagnes affichées dans le tableau, après application des filtres
+const campagnesFiltrees = computed(() => {
+  return campagnesStore.items.filter((campagne) => {
+    // Si un filtre "programme" est choisi, la campagne doit correspondre EXACTEMENT
+    const matchProgramme = !filtreProgramme.value || campagne.title === filtreProgramme.value
+
+    // Si un filtre "statut" est choisi, la campagne doit correspondre EXACTEMENT
+    const matchStatut = !filtreStatut.value || campagne.status === filtreStatut.value
+
+    // Les deux conditions doivent être vraies (ET logique)
+    // -> permet de filtrer par programme seul, statut seul, ou les deux ensemble
+    return matchProgramme && matchStatut
+  })
+})
+
+// Réinitialise les filtres (optionnel, pratique à ajouter)
+const reinitialiserFiltres = () => {
+  filtreProgramme.value = ''
+  filtreStatut.value = ''
+}
+
+// Calcul du nombre de campagnes
+const nombreCampagnes = computed(() => campagnesFiltrees.value.length)
+
+// Campagne publiée
+const campagnePublier = computed(() =>
+  campagnesStore.items.filter(
+    campagne => campagne.status === 'publiee'
+  ).length
+)
+// Campagne clocturé
+const campagneClocturer = computed(() =>
+  campagnesStore.items.filter(
+    campagne => campagne.status === 'cloturee'
+  ).length
+)
+// Campagne en brouillon
+
+const campagneBrouillon = computed(() =>
+  campagnesStore.items.filter(
+    campagne => campagne.status === 'brouillon'
+  ).length
+)
+
+
 const showDeleteModal = ref(false)
 const campagneASupprimer = ref(null)
 const suppressionEnCours = ref(false)
+
+// Fonction pour ouvrir le modal de suppression
+const ouvrirModalSuppression = (campagne) => {
+
+  campagneASupprimer.value = campagne
+
+  showDeleteModal.value = true
+
+}
+
+// Fonction pour fermer le modal de suppression
+const fermerModalSuppression = () => {
+
+  if (suppressionEnCours.value) {
+    return
+  }
+
+  showDeleteModal.value = false
+
+  campagneASupprimer.value = null
+
+}
+
+// Fonction pour confirmer la suppression
+const confirmerSuppression = async () => {
+  suppressionEnCours.value = true
+
+  try {
+    await campagnesStore.supprimerCampagne(campagneASupprimer.value.id)
+    showDeleteModal.value = false
+    campagneASupprimer.value = null
+  } catch (err) {
+    console.error('Erreur lors de la suppression de la campagne :', err.response?.data)
+    // Optionnel : afficher un message d'erreur à l'utilisateur ici
+  } finally {
+    suppressionEnCours.value = false
+  }
+}
+// Gestion de la vue active
 const currentView = ref('campagnes')
 
 const handleViewChange = (newView) => {
@@ -31,71 +126,21 @@ const handleLogout = () => {
   router.push('/login')
 }
 
-const ouvrirModalSuppression = (offer) => {
-  campagneASupprimer.value = offer
-  showDeleteModal.value = true
+// Données fictives pour le tableau des offres
+// Mapping centralisé : chaque valeur de statut (côté Django) correspond
+// à un libellé affiché + des couleurs de badge
+const STATUTS = {
+  brouillon: { label: 'Brouillon', bg: '#F3F4F6', color: '#6B7280' },
+  publiee:   { label: 'Publiée',   bg: '#DCFCE7', color: '#16A34A' },
+  cloturee:  { label: 'Clôturée',  bg: '#FEE2E2', color: '#DC2626' }
 }
 
-const fermerModalSuppression = () => {
-  if (suppressionEnCours.value) {
-    return
-  }
-  showDeleteModal.value = false
-  campagneASupprimer.value = null
+// Retourne les infos d'affichage pour un statut donné
+// -> valeur de secours si le statut est inconnu/absent
+const getStatutInfo = (status) => {
+  return STATUTS[status] || { label: 'Statut inconnu', bg: '#F3F4F6', color: '#6B7280' }
 }
 
-const confirmerSuppression = async () => {
-  suppressionEnCours.value = true
-  try {
-    await deleteCampagne(campagneASupprimer.value.id)
-    await campagnesStore.fetchCampagnes()
-    showDeleteModal.value = false
-    campagneASupprimer.value = null
-  } catch (err) {
-    console.error('Erreur suppression:', err)
-  } finally {
-    suppressionEnCours.value = false
-  }
-}
-
-const allCampagnes = computed(() => campagnesStore.items)
-
-const statusMap = {
-  'À VENIR': { bg: '#FEF3C7', color: '#D97706' },
-  'EN PROGRESSION': { bg: '#DCFCE7', color: '#16A34A' },
-  'PASSÉ': { bg: '#F3F4F6', color: '#6B7280' }
-}
-
-const getStatusStyle = (status) => statusMap[status] || { bg: '#F3F4F6', color: '#6B7280' }
-
-const displayCampagnes = computed(() => {
-  if (allCampagnes.value.length > 0) {
-    return allCampagnes.value.map(item => ({
-      id: item.id,
-      title: item.title || '',
-      category: item.referentiel?.title || 'GÉNÉRAL',
-      categoryColor: '#2563EB',
-      categoryBg: '#EFF6FF',
-      icon: 'fa-solid fa-bullhorn',
-      description: item.description || '',
-      dates: `${item.begin_date || ''} - ${item.end_date || ''}`,
-      durationDetail: 'Actif',
-      candidatesCount: 0,
-      candidatesDetail: 'CANDIDATS',
-      status: item.status ? {
-        'brouillon': 'À VENIR',
-        'publiee': 'EN PROGRESSION',
-        'cloturee': 'PASSÉ'
-      }[item.status] || item.status : 'À VENIR',
-      ...(item.status ? {
-        'brouillon': { bg: '#FEF3C7', color: '#D97706' },
-        'publiee': { bg: '#DCFCE7', color: '#16A34A' },
-        'cloturee': { bg: '#F3F4F6', color: '#6B7280' }
-      }[item.status] || { bg: '#F3F4F6', color: '#6B7280' } : { bg: '#F3F4F6', color: '#6B7280' })
-    }))
-  }
-  return []
-})
 </script>
 
 
@@ -238,7 +283,7 @@ const displayCampagnes = computed(() => {
              STAT CARDS
         ========================== -->
 
-        <div class="d-flex gap-4 mb-4 flex-wrap" v-for="campagne in displayCampagnes" :key="campagne.id">
+        <div class="d-flex gap-4 mb-4 flex-wrap">
 
           <!-- Offres actives -->
 
@@ -247,11 +292,11 @@ const displayCampagnes = computed(() => {
           >
 
             <span class="stat-label text-muted fw-extrabold text-uppercase">
-              {{ campagne.title }}
+              Nombre de Campagnes
             </span>
 
             <span class="stat-value text-dark-blue fw-black">
-              {{ campagne.candidatesCount }}
+              {{ nombreCampagnes }}
             </span>
 
           </div>
@@ -264,11 +309,39 @@ const displayCampagnes = computed(() => {
           >
 
             <span class="stat-label text-muted fw-extrabold text-uppercase">
-              TOTAL OFFRES
+              Campagnes publiées
             </span>
 
-            <span class="stat-value text-pink fw-black">
-              842
+            <span class="stat-value text-success fw-black">
+              {{ campagnePublier }}
+            </span>
+
+          </div>
+
+          <div
+            class="card card-stat px-4 py-3 border-0 shadow-sm rounded-4"
+          >
+
+            <span class="stat-label text-muted fw-extrabold text-uppercase">
+              Campagnes clocturée
+            </span>
+
+            <span class="stat-value text-warning fw-black">
+              {{ campagneClocturer}}
+            </span>
+
+          </div>
+
+          <div
+            class="card card-stat px-4 py-3 border-0 shadow-sm rounded-4"
+          >
+
+            <span class="stat-label text-muted fw-extrabold text-uppercase">
+              Campagnes en brouillon
+            </span>
+
+            <span class="stat-value text-danger fw-black">
+              {{ campagneBrouillon}}
             </span>
 
           </div>
@@ -285,62 +358,44 @@ const displayCampagnes = computed(() => {
         >
 
           <!-- Nom programme -->
-
           <div class="flex-grow-1">
-
-            <label
-              class="form-label text-muted fw-black fs-7 text-uppercase mb-1"
-            >
-              Nom de programme
-            </label>
-
             <select
+              v-model="filtreProgramme"
               class="form-select rounded-4 border-light bg-light-subtle fw-bold text-dark-blue"
             >
-
-              <option selected>
-                Tous les programmes
+              <option value="">Tous les programmes</option>
+              <option
+                v-for="titre in programmesDisponibles"
+                :key="titre"
+                :value="titre"
+              >
+                {{ titre }}
               </option>
-
             </select>
-
           </div>
-
 
           <!-- Statut -->
-
           <div class="flex-grow-1">
-
-            <label
-              class="form-label text-muted fw-black fs-7 text-uppercase mb-1"
-            >
-              Statut
-            </label>
-
             <select
+              v-model="filtreStatut"
               class="form-select rounded-4 border-light bg-light-subtle fw-bold text-dark-blue"
             >
-
-              <option selected>
-                Statut
-              </option>
-
+              <option value="">Tous les statuts</option>
+              <option value="brouillon">Brouillon</option>
+              <option value="publiee">Publiée</option>
+              <option value="cloturee">Clôturée</option>
             </select>
-
           </div>
 
-
-          <!-- Bouton filtre -->
-
+          <!-- Bouton réinitialiser (optionnel) -->
           <div class="align-self-end">
-            
-
             <button
-              class="btn btn-dark-blue px-4 py-2 rounded-3 fw-bold d-flex align-items-center gap-2 shadow-sm"
+              type="button"
+              class="btn btn-pink px-4 py-2 rounded-3 fw-bold"
+              @click="reinitialiserFiltres"
             >
-              Appliquer les filtres
+              Réinitialiser
             </button>
-
           </div>
 
         </div>
@@ -365,7 +420,7 @@ const displayCampagnes = computed(() => {
                 <tr>
 
                   <th
-                    class="ps-4 py-3 text-muted text-uppercase fs-7 fw-black"
+                    class="ps-4 py-3 text-muted text- text-uppercase fs-7 fw-black"
                   >
                     PROGRAMME DE FORMATION
                   </th>
@@ -395,7 +450,7 @@ const displayCampagnes = computed(() => {
                   </th>
 
                   <th
-                    class="pe-4 text-end py-3 text-muted text-uppercase fs-7 fw-black t"
+                    class="py-3 text-muted text-uppercase fs-7 fw-black t"
                   >
                     ACTIONS
                   </th>
@@ -410,48 +465,24 @@ const displayCampagnes = computed(() => {
               <tbody>
 
                 <tr
-                  v-for="offer in displayCampagnes"
-                  :key="offer.id"
+                  v-for="campagne in campagnesFiltrees"
+                  :key="campagne.id"
                 >
-
                   <!-- =========================
-                       PROGRAMME
+                      PROGRAMME
                   ========================== -->
 
                   <td class="ps-4 py-3">
 
                     <div class="d-flex align-items-center gap-3">
 
-                      <div
-                        class="icon-box rounded-4 d-flex align-items-center justify-content-center"
-                        :style="{
-                          backgroundColor: offer.categoryBg,
-                          color: offer.categoryColor
-                        }"
-                      >
-
-                        <i
-                          :class="offer.icon"
-                          class="fs-5"
-                        ></i>
-
-                      </div>
-
-
                       <div>
 
                         <div
                           class="fw-extrabold text-dark-blue fs-6 lh-sm"
                         >
-                          {{ offer.title }}
+                          {{ campagne.title || 'Titre non disponible' }}
                         </div>
-
-                        <span
-                          class="badge-cat fw-black text-uppercase"
-                          :style="{ color: offer.categoryColor }"
-                        >
-                          {{ offer.category }}
-                        </span>
 
                       </div>
 
@@ -461,19 +492,19 @@ const displayCampagnes = computed(() => {
 
 
                   <!-- =========================
-                       DESCRIPTION
+                      DESCRIPTION
                   ========================== -->
 
                   <td
                     class="py-3 text-muted fs-7"
                     style="max-width: 250px;"
                   >
-                    {{ offer.description }}
+                    {{ campagne.description || 'Aucune description disponible' }}
                   </td>
 
 
                   <!-- =========================
-                       DUREE
+                      DUREE
                   ========================== -->
 
                   <td class="py-3">
@@ -481,21 +512,21 @@ const displayCampagnes = computed(() => {
                     <div
                       class="fw-bold text-dark-blue fs-7"
                     >
-                      {{ offer.dates }}
+                      {{ campagne.begin_date || 'Dates non disponibles' }}
                     </div>
 
                     <small
                       class="text-success fw-semibold"
                       style="font-size: 11px;"
                     >
-                      {{ offer.durationDetail }}
+                      {{ campagne.end_date || 'Durée non disponible' }}
                     </small>
 
                   </td>
 
 
                   <!-- =========================
-                       CANDIDATS
+                      CANDIDATS
                   ========================== -->
 
                   <td class="text-center py-3">
@@ -503,40 +534,38 @@ const displayCampagnes = computed(() => {
                     <div
                       class="fw-black text-dark-blue fs-5 lh-1"
                     >
-                      {{ offer.candidatesCount }}
+                      {{ campagne.candidatesCount || 0 }}
                     </div>
 
                     <span
                       class="text-muted text-uppercase fw-extrabold"
                       style="font-size: 10px;"
                     >
-                      {{ offer.candidatesDetail }}
+                      {{ campagne.candidatesDetail || 'CANDIDATS' }}
                     </span>
 
                   </td>
 
 
                   <!-- =========================
-                       STATUT
+                      STATUT
                   ========================== -->
 
                   <td class="py-3">
-
                     <span
                       class="badge px-3 py-2 rounded-pill fw-extrabold fs-7"
                       :style="{
-                        backgroundColor: offer.statusBg,
-                        color: offer.statusColor
+                        backgroundColor: getStatutInfo(campagne.status).bg,
+                        color: getStatutInfo(campagne.status).color
                       }"
                     >
-                      {{ offer.status }}
+                      {{ getStatutInfo(campagne.status).label }}
                     </span>
-
                   </td>
 
 
                   <!-- =========================
-                       ACTIONS
+                      ACTIONS
                   ========================== -->
 
                   <td class="pe-4 text-end py-3">
@@ -546,31 +575,27 @@ const displayCampagnes = computed(() => {
                       <!-- Modifier -->
 
                       <router-link
-                        :to="`/campagnes/update/${offer.id}`"
+                        :to="`/campagnes/update/${campagne.id}`"
                         class="btn btn-light btn-sm rounded-3 shadow-xs text-primary"
                       >
-
                         <i class="fa-regular fa-pen-to-square"></i>
-
                       </router-link>
 
 
                       <!-- Voir détails -->
 
                       <router-link
-                        :to="`/campagnes/detail/${offer.id}`"
+                        :to="`/campagnes/detail/${campagne.id}`"
                         class="btn btn-light btn-sm rounded-3 shadow-xs text-secondary"
                       >
-
                         <i class="fa-regular fa-eye"></i>
-
                       </router-link>
 
 
                       <!-- Formulaire -->
 
                       <router-link
-                        :to="`/form-builder/${offer.id}`"
+                        :to="`/form-builder/${campagne.id}`"
                         class="btn btn-light btn-sm rounded-3 shadow-xs text-success"
                         title="Créer un formulaire"
                       >
@@ -583,11 +608,11 @@ const displayCampagnes = computed(() => {
                       <!-- Supprimer -->
 
                       <button
-                          type="button"
-                          class="btn btn-light btn-sm rounded-3 shadow-xs text-danger"
-                          @click="ouvrirModalSuppression(offer)"
-                        >
-                          <i class="fa-regular fa-trash-can"></i>
+                        type="button"
+                        class="btn btn-light btn-sm rounded-3 shadow-xs text-danger"
+                        @click="ouvrirModalSuppression(campagne)"
+                      >
+                        <i class="fa-regular fa-trash-can"></i>
                       </button>
 
                     </div>

@@ -1,14 +1,13 @@
 <!-- views/DetailCampagne.vue -->
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
-import { useAuthStore } from '@/stores/auth'
-import { getCampagneById } from '@/api/endpoints/campagnes'
+import { useCampagnesStore } from '@/stores/campagnes'
 
 const route = useRoute()
-const auth = useAuthStore()
+const campagnesStore = useCampagnesStore()
 
 const currentView = ref('campagnes')
 
@@ -17,55 +16,13 @@ const handleViewChange = (newView) => {
 }
 
 const handleLogout = () => {
-  auth.logout()
   window.location.href = '/login'
 }
 
-const campagne = ref({
-  nom: '',
-  categorie: '',
-  description: '',
-  referentiel: '',
-  dateDebut: '',
-  dateFin: '',
-  statut: '',
-  candidats: 0
-})
-
-const criteres = ref([])
-const loading = ref(true)
-const errorMessage = ref('')
-
-onMounted(async () => {
-  try {
-    const { data } = await getCampagneById(route.params.id)
-    campagne.value = {
-      nom: data.title || '',
-      categorie: data.referentiel?.title || '',
-      description: data.description || '',
-      referentiel: data.referentiel?.title || 'Standard de l’entreprise',
-      dateDebut: data.begin_date || '',
-      dateFin: data.end_date || '',
-      statut: data.status ? {
-        'brouillon': 'À VENIR',
-        'publiee': 'EN PROGRESSION',
-        'cloturee': 'PASSÉ'
-      }[data.status] || data.status : '',
-      candidats: 0
-    }
-    criteres.value = (data.criteres || []).map((c) => ({
-      id: c.id,
-      nom: c.name || '',
-      description: c.description || ''
-    }))
-  } catch (err) {
-    errorMessage.value = err.response?.data?.detail || 'Erreur lors du chargement'
-  } finally {
-    loading.value = false
-  }
+onMounted(() => {
+  campagnesStore.fetchCampagneById(route.params.id)
 })
 </script>
-
 <template>
 
   <div class="app-layout">
@@ -126,11 +83,11 @@ onMounted(async () => {
             <div class="user-information">
 
               <div class="user-name">
-                {{ auth.user?.first_name || auth.user?.username || 'Utilisateur' }}
+                Ndeye
               </div>
 
               <div class="user-role">
-                {{ auth.user?.is_admin ? 'ADMIN' : 'UTILISATEUR' }}
+                HR SUPERVISOR
               </div>
 
             </div>
@@ -169,11 +126,11 @@ onMounted(async () => {
             <div class="d-flex align-items-center gap-3 mb-2">
 
               <h1 class="h2 fw-black text-dark-blue mb-0">
-                {{ campagne.nom }}
+                {{ campagnesStore.campagneActive?.title }}
               </h1>
 
               <span class="badge rounded-pill status-badge">
-                {{ campagne.statut }}
+                {{ campagnesStore.campagneActive?.status }}
               </span>
 
             </div>
@@ -188,16 +145,11 @@ onMounted(async () => {
 
           <router-link
             :to="`/campagnes/update/${route.params.id}`"
-            class="btn btn-pink px-4 py-2 rounded-3 fw-bold d-flex align-items-center gap-2 shadow-sm"
+            class="btn btn-pink rounded-3 px-4 py-2 fw-bold"
           >
             <i class="fa-regular fa-pen-to-square"></i>
-
-            <span>
-              Modifier
-            </span>
-
+            Modifier la campagne
           </router-link>
-
         </div>
 
 
@@ -220,7 +172,7 @@ onMounted(async () => {
                 </h5>
 
                 <p class="text-muted mb-0">
-                  {{ campagne.description }}
+                  {{ campagnesStore.campagneActive?.description }}
                 </p>
 
               </div>
@@ -243,7 +195,7 @@ onMounted(async () => {
                 </h5>
 
                 <span class="badge rounded-pill status-badge mb-3">
-                  {{ campagne.statut }}
+                  {{ campagnesStore.campagneActive?.status }}
                 </span>
 
                 <p class="text-muted fs-7 mb-0">
@@ -274,21 +226,6 @@ onMounted(async () => {
 
             <div class="row g-4">
 
-              <!-- Catégorie -->
-
-              <div class="col-md-6">
-
-                <div class="info-label">
-                  Catégorie
-                </div>
-
-                <div class="info-value">
-                  {{ campagne.categorie }}
-                </div>
-
-              </div>
-
-
               <!-- Référentiel -->
 
               <div class="col-md-6">
@@ -298,7 +235,7 @@ onMounted(async () => {
                 </div>
 
                 <div class="info-value">
-                  {{ campagne.referentiel }}
+                  {{ campagnesStore.campagneActive?.referentiel?.title }}
                 </div>
 
               </div>
@@ -313,11 +250,8 @@ onMounted(async () => {
                 </div>
 
                 <div class="info-value d-flex align-items-center gap-2">
-
                   <i class="fa-regular fa-calendar text-muted"></i>
-
-                  {{ campagne.dateDebut }}
-
+                  {{ campagnesStore.campagneActive?.begin_date }}
                 </div>
 
               </div>
@@ -335,7 +269,7 @@ onMounted(async () => {
 
                   <i class="fa-regular fa-calendar text-muted"></i>
 
-                  {{ campagne.dateFin }}
+                  {{ campagnesStore.campagneActive?.end_date }}
 
                 </div>
 
@@ -354,7 +288,6 @@ onMounted(async () => {
 
                   <i class="fa-solid fa-users text-muted"></i>
 
-                  {{ campagne.candidats }}
 
                   candidats
 
@@ -394,7 +327,7 @@ onMounted(async () => {
               </div>
 
               <span class="criteria-count">
-                {{ criteres.length }} critères
+                {{ campagnesStore.campagneActive?.criteres?.length || 0 }} critères
               </span>
 
             </div>
@@ -402,36 +335,20 @@ onMounted(async () => {
 
             <!-- Liste des critères -->
 
-            <div class="d-flex flex-column gap-3">
-
+           <div class="d-flex flex-column gap-3">
               <div
-                v-for="(critere, index) in criteres"
+                v-for="(critere, index) in campagnesStore.campagneActive?.criteres"
                 :key="critere.id"
                 class="criterion-card"
               >
-
                 <div class="d-flex align-items-start gap-3">
-
-                  <div class="criterion-number">
-                    {{ index + 1 }}
-                  </div>
-
+                  <div class="criterion-number">{{ index + 1 }}</div>
                   <div>
-
-                    <h6 class="fw-bold text-dark-blue mb-1">
-                      {{ critere.nom }}
-                    </h6>
-
-                    <p class="text-muted fs-7 mb-0">
-                      {{ critere.description }}
-                    </p>
-
+                    <h6 class="fw-bold text-dark-blue mb-1">{{ critere.name }}</h6>
+                    <p class="text-muted fs-7 mb-0">{{ critere.description }}</p>
                   </div>
-
                 </div>
-
               </div>
-
             </div>
 
           </div>
@@ -450,14 +367,6 @@ onMounted(async () => {
             class="btn btn-light rounded-3 px-4 py-2 fw-bold"
           >
             Retour
-          </router-link>
-
-          <router-link
-            to="/campagnes/update/"
-            class="btn btn-pink rounded-3 px-4 py-2 fw-bold"
-          >
-            <i class="fa-regular fa-pen-to-square me-2"></i>
-            Modifier la campagne
           </router-link>
 
         </div>
