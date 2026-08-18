@@ -1,5 +1,6 @@
-<!-- components/Sidebar.vue -->
 <script setup>
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 defineProps({
   activeView: {
@@ -10,6 +11,14 @@ defineProps({
 })
 
 const emit = defineEmits(['logout'])
+const router = useRouter()
+const authStore = useAuthStore()
+
+const handleLogout = async () => {
+  emit('logout')
+  await authStore.logout()
+  router.push('/login')
+}
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', to: '/campagnes' },
@@ -58,7 +67,7 @@ const navItems = [
       <button 
         type="button" 
         class="btn logout-btn w-100 d-flex align-items-center gap-3 px-3 py-2 rounded-3 text-start text-white"
-        @click="emit('logout')"
+        @click="handleLogout"
       >
         <i class="fa-solid fa-right-from-bracket"></i>
         <span class="fw-bold">Déconnexion</span>

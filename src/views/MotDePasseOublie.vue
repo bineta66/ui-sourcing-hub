@@ -3,7 +3,7 @@
 
     <div class="row g-0 bg-white shadow overflow-hidden w-100 h-100">
 
-      <!--  PARTIE GAUCHE  -->
+      <!-- PARTIE GAUCHE -->
       <div class="col-md-6 d-flex flex-column justify-content-between" style="background-color: #00313C; padding: 48px 40px;">
 
         <!-- Logo -->
@@ -28,14 +28,14 @@
 
       </div>
 
-      <!--  PARTIE DROITE  -->
+      <!-- PARTIE DROITE -->
       <div class="col-md-6 d-flex flex-column justify-content-center" style="padding: 48px 48px 40px 48px; background-color: #FFFFFF;">
 
-        <div class="w-100">
+        <div class="w-100" style="max-width: 460px; margin: 0 auto;">
 
           <!-- Header -->
-          <div class="mb-5">
-            <h2 class="fw-bold mb-3" style="font-size: 28px; color: #111827; line-height: 1.2;">
+          <div class="mb-4">
+            <h2 class="fw-bold mb-2" style="font-size: 28px; color: #111827; line-height: 1.2;">
               Mot de passe oublié ?
             </h2>
             <p class="text-secondary mb-0" style="font-size: 14px;">
@@ -43,12 +43,23 @@
             </p>
           </div>
 
+          <!-- Alertes Feedback -->
+          <div v-if="errorMessage" class="alert alert-danger d-flex align-items-center py-2 px-3 mb-4" style="font-size: 13px; border-radius: 8px;">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div>{{ errorMessage }}</div>
+          </div>
+
+          <div v-if="successMessage" class="alert alert-success d-flex align-items-center py-2 px-3 mb-4" style="font-size: 13px; border-radius: 8px;">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div>{{ successMessage }}</div>
+          </div>
+
           <!-- Formulaire -->
-          <form @submit.prevent="handleReset" class="w-100">
+          <form v-if="!successMessage" @submit.prevent="handleReset" class="w-100">
 
             <!-- Email -->
             <div class="mb-4">
-              <label for="email" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; padding: 0; margin-bottom: 10px;">
+              <label for="email" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; margin-bottom: 8px;">
                 Adresse email
               </label>
               <div class="input-group">
@@ -78,7 +89,7 @@
               :style="hoverBtn && !loading ? 'background-color: #b01a3f;' : 'background-color: #D20C4F;'"
             >
               <span v-if="loading">
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" style="width: 18px; height: 18px; border-width: 2px;"></span>
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                 Envoi en cours...
               </span>
               <span v-else>Réinitialiser le mot de passe</span>
@@ -88,9 +99,9 @@
 
           <!-- Lien vers login -->
           <div class="text-center mt-4">
-            <span style="font-size: 12px; color: #6B7280; font-weight: 400;">
-              <a href="/login" style="color: #D20C4F; text-decoration: none; font-weight: 500;">← Retour à la connexion</a>
-            </span>
+            <router-link to="/login" style="font-size: 13px; color: #D20C4F; text-decoration: none; font-weight: 500;">
+              ← Retour à la connexion
+            </router-link>
           </div>
 
         </div>
@@ -104,26 +115,33 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
-const router = useRouter()
+const authStore = useAuthStore()
 
 const form = reactive({
-  email: ''
+  email: '',
 })
 
 const loading = ref(false)
 const hoverBtn = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
 
 const handleReset = async () => {
+  errorMessage.value = ''
+  successMessage.value = ''
   loading.value = true
+
   try {
-    console.log('Réinitialisation demandée pour :', form.email)
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    alert('Si un compte existe avec cette adresse, un email de réinitialisation vous sera envoyé.')
-    router.push('/login')
+    const res = await authStore.requestPasswordReset(form.email)
+    successMessage.value =
+      res?.detail ||
+      'Si cette adresse correspond à un compte actif, un email contenant les instructions de réinitialisation a été envoyé.'
+    form.email = ''
   } catch (error) {
-    console.error('Erreur lors de la réinitialisation :', error)
+    errorMessage.value =
+      authStore.error || "Une erreur est survenue lors de la demande de réinitialisation."
   } finally {
     loading.value = false
   }

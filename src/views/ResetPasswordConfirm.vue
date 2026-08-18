@@ -19,10 +19,10 @@
         <!-- Texte bas -->
         <div>
           <h4 class="fw-semibold text-white mb-3" style="font-size: 18px; line-height: 1.3; max-width: 450px;">
-            Définissez votre mot de passe pour accéder à votre espace collaboratif.
+            Définissez votre nouveau mot de passe.
           </h4>
           <p class="text-white-50 mb-0" style="font-size: 12px; line-height: 1.5; max-width: 300px;">
-            Rejoignez la plateforme centralisée pour mener à bien les sourcing.
+            Choisissez un mot de passe sécurisé pour protéger l'accès à votre compte.
           </p>
         </div>
 
@@ -36,10 +36,10 @@
           <!-- Header -->
           <div class="mb-4">
             <h2 class="fw-bold mb-2" style="font-size: 28px; color: #111827; line-height: 1.2;">
-              Activer mon compte
+              Nouveau mot de passe
             </h2>
             <p class="text-secondary mb-0" style="font-size: 14px;">
-              Définissez votre mot de passe pour finaliser l'activation.
+              Saisissez et confirmez votre nouveau mot de passe.
             </p>
           </div>
 
@@ -55,32 +55,11 @@
           </div>
 
           <!-- Formulaire -->
-          <form v-if="!successMessage" @submit.prevent="handleRegister" class="w-100">
+          <form v-if="!successMessage" @submit.prevent="handleSubmit" class="w-100">
 
-            <!-- Token d'invitation (si non fourni dans l'URL) -->
-            <div v-if="!hasTokenInUrl" class="mb-4">
-              <label for="token" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; margin-bottom: 8px;">
-                Code / Token d'activation
-              </label>
-              <div class="input-group">
-                <span class="input-group-text bg-white border-end-0" style="border: 1px solid #E5E7EB; border-right: none; padding: 0 16px;">
-                  <i class="bi bi-key" style="font-size: 18px; color: #9CA3AF;"></i>
-                </span>
-                <input
-                  id="token"
-                  v-model="form.token"
-                  type="text"
-                  class="form-control border-start-0"
-                  style="height: 48px; font-size: 14px; border: 1px solid #E5E7EB; border-left: none; background-color: #FFFFFF;"
-                  placeholder="Collez votre code d'activation reçu par email"
-                  required
-                >
-              </div>
-            </div>
-
-            <!-- Mot de passe -->
+            <!-- Nouveau mot de passe -->
             <div class="mb-4">
-              <label for="password" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; margin-bottom: 8px;">
+              <label for="new_password" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; margin-bottom: 8px;">
                 Nouveau mot de passe
               </label>
               <div class="input-group">
@@ -88,11 +67,11 @@
                   <i class="bi bi-lock" style="font-size: 18px; color: #9CA3AF;"></i>
                 </span>
                 <input
-                  id="password"
-                  v-model="form.password"
+                  id="new_password"
+                  v-model="form.newPassword"
                   :type="showPassword ? 'text' : 'password'"
                   class="form-control border-start-0"
-                  style="height: 48px; font-size: 14px; border: 1px solid #E5E7EB; border-left: none; background-color: #FFFFFF;"
+                  style="height: 48px; font-size: 14px; border: 1px solid #E5E7EB; border-left: none;"
                   placeholder="••••••••"
                   required
                 >
@@ -107,9 +86,9 @@
               </div>
             </div>
 
-            <!-- Confirmation mot de passe -->
+            <!-- Confirmation nouveau mot de passe -->
             <div class="mb-4">
-              <label for="confirmPassword" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; margin-bottom: 8px;">
+              <label for="new_password_confirm" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; margin-bottom: 8px;">
                 Confirmer le mot de passe
               </label>
               <div class="input-group">
@@ -117,11 +96,11 @@
                   <i class="bi bi-lock-fill" style="font-size: 18px; color: #9CA3AF;"></i>
                 </span>
                 <input
-                  id="confirmPassword"
-                  v-model="form.confirmPassword"
+                  id="new_password_confirm"
+                  v-model="form.newPasswordConfirm"
                   :type="showConfirmPassword ? 'text' : 'password'"
                   class="form-control border-start-0"
-                  style="height: 48px; font-size: 14px; border: 1px solid #E5E7EB; border-left: none; background-color: #FFFFFF;"
+                  style="height: 48px; font-size: 14px; border: 1px solid #E5E7EB; border-left: none;"
                   placeholder="••••••••"
                   required
                 >
@@ -136,7 +115,7 @@
               </div>
             </div>
 
-            <!-- Bouton -->
+            <!-- Bouton de soumission -->
             <button
               type="submit"
               class="btn w-100 fw-semibold text-white mb-0"
@@ -148,21 +127,21 @@
             >
               <span v-if="loading">
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                Activation compte...
+                Réinitialisation...
               </span>
-              <span v-else>Activer mon compte</span>
+              <span v-else>Valider le mot de passe</span>
             </button>
 
           </form>
 
-          <!-- Redirection après succès -->
+          <!-- Bouton retour connexion si succès -->
           <div v-else class="text-center mt-3">
             <router-link
               to="/login"
               class="btn w-100 fw-semibold text-white"
               style="background-color: #00313C; height: 48px; font-size: 15px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;"
             >
-              Aller à la page de connexion
+              Se connecter
             </router-link>
           </div>
 
@@ -183,20 +162,18 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-const router = useRouter()
 const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 
 const form = reactive({
-  token: '',
-  password: '',
-  confirmPassword: '',
+  newPassword: '',
+  newPasswordConfirm: ''
 })
 
-const hasTokenInUrl = ref(false)
 const loading = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
@@ -204,50 +181,51 @@ const hoverBtn = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
+const uid = ref('')
+const token = ref('')
+
 onMounted(() => {
-  const queryToken = route.query.token || route.params.token
-  if (queryToken) {
-    form.token = queryToken
-    hasTokenInUrl.value = true
+  uid.value = route.params.uid || route.query.uid || ''
+  token.value = route.params.token || route.query.token || ''
+
+  if (!uid.value || !token.value) {
+    errorMessage.value = "Lien de réinitialisation invalide ou incomplet."
   }
 })
 
-const handleRegister = async () => {
+const handleSubmit = async () => {
   errorMessage.value = ''
   successMessage.value = ''
 
-  if (!form.token) {
-    errorMessage.value = "Le code ou token d'activation est requis."
+  if (!uid.value || !token.value) {
+    errorMessage.value = "Le lien de réinitialisation est incomplet (UID ou token manquant)."
     return
   }
 
-  if (form.password !== form.confirmPassword) {
-    errorMessage.value = 'Les mots de passe ne correspondent pas.'
+  if (form.newPassword !== form.newPasswordConfirm) {
+    errorMessage.value = "Les deux mots de passe ne correspondent pas."
     return
   }
 
-  if (form.password.length < 8) {
-    errorMessage.value = 'Le mot de passe doit contenir au moins 8 caractères.'
+  if (form.newPassword.length < 8) {
+    errorMessage.value = "Le mot de passe doit contenir au moins 8 caractères."
     return
   }
 
   loading.value = true
   try {
-    const res = await authStore.activateAccount({
-      token: form.token,
-      password: form.password,
-      password_confirm: form.confirmPassword,
+    const data = await authStore.confirmPasswordReset({
+      uid: uid.value,
+      token: token.value,
+      new_password: form.newPassword,
+      new_password_confirm: form.newPasswordConfirm
     })
-
-    successMessage.value =
-      res.detail || 'Votre compte a été activé avec succès. Vous pouvez maintenant vous connecter.'
-
+    successMessage.value = data.detail || "Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter."
     setTimeout(() => {
       router.push('/login')
     }, 2500)
-  } catch (error) {
-    errorMessage.value =
-      authStore.error || "Erreur lors de l'activation du compte. Le lien est peut-être expiré."
+  } catch (err) {
+    errorMessage.value = authStore.error || "Erreur lors de la réinitialisation du mot de passe."
   } finally {
     loading.value = false
   }

@@ -15,11 +15,11 @@
           </button>
           <div class="user-pill">
             <div class="avatar">
-              <img src="https://ui-avatars.com/api/?name=Ndeye&background=D20C4F&color=fff&size=32" alt="Ndeye" />
+              <img :src="`https://ui-avatars.com/api/?name=${encodeURIComponent(authStore.displayName)}&background=D20C4F&color=fff&size=32`" :alt="authStore.displayName" />
             </div>
             <div class="user-meta">
-              <span class="user-name">Ndeye</span>
-              <span class="user-role">Recruitment Supervisor</span>
+              <span class="user-name">{{ authStore.displayName }}</span>
+              <span class="user-role">{{ authStore.userRole || 'Utilisateur' }}</span>
             </div>
             <i class="bi bi-chevron-down user-chevron"></i>
           </div>
@@ -137,8 +137,10 @@
 <script setup>
 import Sidebar from '@/components/Sidebar.vue'
 import { useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const authStore = useAuthStore()
 
 const users = [
   {

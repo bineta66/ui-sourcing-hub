@@ -3,7 +3,7 @@
 
     <div class="row g-0 bg-white shadow overflow-hidden w-100 h-100">
 
-      <!--  PARTIE GAUCHE  -->
+      <!-- PARTIE GAUCHE -->
       <div class="col-md-6 d-flex flex-column justify-content-between" style="background-color: #00313C; padding: 48px 40px;">
 
         <!-- Logo -->
@@ -28,14 +28,14 @@
 
       </div>
 
-      <!--  PARTIE DROITE  -->
+      <!-- PARTIE DROITE -->
       <div class="col-md-6 d-flex flex-column justify-content-center" style="padding: 48px 48px 40px 48px; background-color: #FFFFFF;">
 
-        <div class="w-100">
+        <div class="w-100" style="max-width: 460px; margin: 0 auto;">
 
           <!-- Header -->
-          <div class="mb-5">
-            <h2 class="fw-bold mb-3" style="font-size: 28px; color: #111827; line-height: 1.2;">
+          <div class="mb-4">
+            <h2 class="fw-bold mb-2" style="font-size: 28px; color: #111827; line-height: 1.2;">
               Connexion
             </h2>
             <p class="text-secondary mb-0" style="font-size: 14px;">
@@ -43,12 +43,18 @@
             </p>
           </div>
 
+          <!-- Alerte d'erreur -->
+          <div v-if="errorMessage" class="alert alert-danger d-flex align-items-center py-2 px-3 mb-4" style="font-size: 13px; border-radius: 8px;">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div>{{ errorMessage }}</div>
+          </div>
+
           <!-- Formulaire -->
           <form @submit.prevent="handleLogin" class="w-100">
 
             <!-- Email -->
             <div class="mb-4">
-              <label for="email" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; padding: 0; margin-bottom: 10px;">
+              <label for="email" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; margin-bottom: 8px;">
                 Adresse email
               </label>
               <div class="input-group">
@@ -69,7 +75,7 @@
 
             <!-- Mot de passe -->
             <div class="mb-4">
-              <label for="password" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; padding: 0; margin-bottom: 10px;">
+              <label for="password" class="form-label fw-medium" style="font-size: 14px; color: #1F2937; margin-bottom: 8px;">
                 Mot de passe
               </label>
               <div class="input-group">
@@ -110,14 +116,13 @@
                   Se souvenir de moi
                 </label>
               </div>
-              <a
-                href="#"
+              <router-link
+                to="/mot-de-passe-oublie"
                 class="text-decoration-none fw-medium"
                 style="font-size: 14px; color: #D20C4F;"
-                @click.prevent="goToForgotPassword"
               >
                 Mot de passe oublié ?
-              </a>
+              </router-link>
             </div>
 
             <!-- Bouton -->
@@ -131,7 +136,7 @@
               :style="hoverBtn && !loading ? 'background-color: #b01a3f;' : 'background-color: #D20C4F;'"
             >
               <span v-if="loading">
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" style="width: 18px; height: 18px; border-width: 2px;"></span>
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                 Connexion...
               </span>
               <span v-else>Connexion</span>
@@ -146,8 +151,6 @@
             </span>
           </div>
 
-         
-
         </div>
 
       </div>
@@ -159,40 +162,43 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
 
 const form = reactive({
   email: '',
   password: '',
-  remember: false
+  remember: false,
 })
 
 const loading = ref(false)
 const showPassword = ref(false)
 const hoverBtn = ref(false)
+const errorMessage = ref('')
 
 const handleLogin = async () => {
+  errorMessage.value = ''
   loading.value = true
   try {
-    console.log('Email :', form.email)
-    console.log('Password :', form.password)
-    console.log('Remember :', form.remember)
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    await authStore.login({
+      email: form.email,
+      password: form.password,
+      remember: form.remember,
+    })
+
+    const redirectPath = route.query.redirect || '/campagnes'
+    router.push(redirectPath)
   } catch (error) {
-    console.error('Erreur de connexion :', error)
+    errorMessage.value =
+      authStore.error ||
+      'Impossible de se connecter. Vérifiez vos identifiants ou l\'état de votre compte.'
   } finally {
     loading.value = false
   }
-}
-
-const goToForgotPassword = () => {
-  router.push('/mot-de-passe-oublie')
-}
-
-const forgotPassword = () => {
-  console.log('Mot de passe oublié')
 }
 </script>
 

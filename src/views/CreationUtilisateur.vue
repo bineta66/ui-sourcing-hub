@@ -13,10 +13,24 @@
           <span class="breadcrumb-separator">/</span>
           <span class="breadcrumb-current">{{ isEditMode ? 'Modifier un utilisateur' : 'Création d\'un nouvel utilisateur' }}</span>
         </div>
-        <button class="btn btn-dark btn-create-account">{{ isEditMode ? 'Mettre à jour' : 'Créer un compte' }}</button>
+        <button class="btn btn-dark btn-create-account" :disabled="loading" @click="handleSubmit">
+          <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
+          {{ isEditMode ? 'Mettre à jour' : 'Inviter l\'utilisateur' }}
+        </button>
       </header>
 
       <div class="content-body">
+        <!-- Alertes Feedback -->
+        <div v-if="errorMessage" class="alert alert-danger d-flex align-items-center py-2 px-3 mb-3" style="font-size: 13px; border-radius: 8px;">
+          <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+          <div>{{ errorMessage }}</div>
+        </div>
+
+        <div v-if="successMessage" class="alert alert-success d-flex align-items-center py-2 px-3 mb-3" style="font-size: 13px; border-radius: 8px;">
+          <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+          <div>{{ successMessage }}</div>
+        </div>
+
         <div class="two-col-layout">
 
           <div class="col-main">
@@ -171,8 +185,10 @@
           <p class="action-info">Les champs marqués sont obligatoires pour l'activation du compte.</p>
           <div class="action-buttons">
             <router-link to="/gestion-utilisateurs" class="btn btn-cancel">Annuler et fermer</router-link>
-            <button class="btn btn-secondary-action">Mettre à jour et rétendre</button>
-            <button class="btn btn-primary-action">{{ isEditMode ? 'Enregistrer les modifications' : 'Créer un compte utilisateur' }}</button>
+            <button class="btn btn-primary-action" :disabled="loading" @click="handleSubmit">
+              <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
+              {{ isEditMode ? 'Enregistrer les modifications' : 'Inviter l\'utilisateur' }}
+            </button>
           </div>
         </footer>
 
@@ -184,58 +200,68 @@
 
 <script setup>
 import { reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
 const defaultUser = {
-  firstname: 'Jonathan',
-  lastname: 'Doe',
-  email: 'jonathan@company.com',
-  phone: '+1 (555) 000-0000',
+  firstname: '',
+  lastname: '',
+  email: '',
+  phone: '',
   referentiel: 'Talent Acquisition',
   role: 'admin',
   status: 'active',
-  password: '',
-  confirmPassword: ''
 }
-
-const users = [
-  { id: 1, firstname: 'David', lastname: 'Richardson', email: 'd.richardson@recruit.ai', phone: '+221 77 000 00 00', referentiel: 'Talent Acquisition', role: 'admin', status: 'active' },
-  { id: 2, firstname: 'Eleanor', lastname: 'Rigby', email: 'eleanor.r@recruit.ai', phone: '+221 77 000 00 01', referentiel: 'Talent Acquisition', role: 'jury', status: 'active' },
-  { id: 3, firstname: 'Marcus', lastname: 'Aurelius', email: 'marcus.a@recruit.ai', phone: '+221 77 000 00 02', referentiel: 'Talent Acquisition', role: 'candidate', status: 'inactive' },
-  { id: 4, firstname: 'Elena', lastname: 'Martinez', email: 'elena.m@recruit.ai', phone: '+221 77 000 00 03', referentiel: 'Talent Acquisition', role: 'candidate', status: 'active' },
-  { id: 5, firstname: 'Julian', lastname: 'Chen', email: 'j.chen@recruit.ai', phone: '+221 77 000 00 04', referentiel: 'Talent Acquisition', role: 'jury', status: 'active' }
-]
 
 const isEditMode = ref(false)
-
 const form = reactive({ ...defaultUser })
+const loading = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
 
-if (route.query.id) {
-  const found = users.find(u => u.id === Number(route.query.id))
-  if (found) {
-    isEditMode.value = true
-    Object.assign(form, found)
-  }
+// Mapping role frontend -> role backend
+const mapRoleToBackend = (role) => {
+  const normalized = (role || '').toLowerCase()
+  if (normalized === 'admin') return 'ADMIN'
+  if (normalized === 'jury') return 'JURY'
+  return 'CANDIDAT'
 }
 
-watch(() => route.query.id, (newId) => {
-  if (newId) {
-    const found = users.find(u => u.id === Number(newId))
-    if (found) {
-      isEditMode.value = true
-      Object.assign(form, found)
-    }
-  } else {
-    isEditMode.value = false
-    Object.assign(form, defaultUser)
-  }
-})
+const handleSubmit = async () => {
+  errorMessage.value = ''
+  successMessage.value = ''
 
-const loading = ref(false)
-const hoverBtn = ref(false)
+  if (!form.email) {
+    errorMessage.value = "L'adresse email est requise pour inviter un utilisateur."
+    return
+  }
+
+  loading.value = true
+  try {
+    const backendRole = mapRoleToBackend(form.role)
+    const res = await authStore.inviteUser({
+      email: form.email,
+      role: backendRole,
+    })
+
+    successMessage.value =
+      res?.detail || `Invitation envoyée avec succès à ${form.email} (${backendRole}).`
+
+    setTimeout(() => {
+      router.push('/gestion-utilisateurs')
+    }, 2000)
+  } catch (err) {
+    errorMessage.value =
+      authStore.error || "Erreur lors de l'envoi de l'invitation à l'utilisateur."
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <style scoped>
