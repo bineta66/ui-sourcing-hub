@@ -1,10 +1,14 @@
 <!-- views/DetailCampagne.vue -->
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
+import { useCampagnesStore } from '@/stores/campagnes'
 
-// Vue active dans la sidebar
+const route = useRoute() // permet de lire l'id présent dans l'URL (/campagnes/detail/:id)
+const campagnesStore = useCampagnesStore()
+
 const currentView = ref('campagnes')
 
 const handleViewChange = (newView) => {
@@ -15,43 +19,12 @@ const handleLogout = () => {
   console.log('Déconnexion de l’utilisateur')
 }
 
-// Données de la campagne
-const campagne = ref({
-  nom: 'Introduction à l’infrastructure cloud',
-
-  categorie: 'FORMATION TECHNIQUE',
-
-  description:
-    'Fondamentaux des modèles d’architecture AWS et Azure pour débutants. Cette formation permet de comprendre les concepts essentiels du cloud et les principales infrastructures utilisées dans les environnements professionnels.',
-
-  referentiel: 'Standard de l’entreprise',
-
-  dateDebut: '24 Octobre 2026',
-
-  dateFin: '12 Novembre 2026',
-
-  statut: 'À VENIR',
-
-  candidats: 42
+// Au montage : on récupère l'id depuis l'URL et on va chercher
+// les vraies données de cette campagne via l'API
+onMounted(() => {
+  campagnesStore.fetchCampagneById(route.params.id)
 })
-
-// Critères d'évaluation
-const criteres = ref([
-  {
-    id: 1,
-    nom: 'Respect des standards de développement',
-    description:
-      'Évaluation du respect des standards et bonnes pratiques de développement.'
-  },
-  {
-    id: 2,
-    nom: 'Compréhension des concepts cloud',
-    description:
-      'Évaluation de la compréhension des principaux concepts liés au cloud.'
-  }
-])
 </script>
-
 <template>
 
   <div class="app-layout">
@@ -149,11 +122,11 @@ const criteres = ref([
             <div class="d-flex align-items-center gap-3 mb-2">
 
               <h1 class="h2 fw-black text-dark-blue mb-0">
-                {{ campagne.nom }}
+                {{ campagnesStore.campagneActive?.title }}
               </h1>
 
               <span class="badge rounded-pill status-badge">
-                {{ campagne.statut }}
+                {{ campagnesStore.campagneActive?.status }}
               </span>
 
             </div>
@@ -167,17 +140,12 @@ const criteres = ref([
           <!-- Bouton modifier -->
 
           <router-link
-            to="/campagnes/update/"
-            class="btn btn-pink px-4 py-2 rounded-3 fw-bold d-flex align-items-center gap-2 shadow-sm"
+            :to="`/campagnes/update/${route.params.id}`"
+            class="btn btn-pink rounded-3 px-4 py-2 fw-bold"
           >
             <i class="fa-regular fa-pen-to-square"></i>
-
-            <span>
-              Modifier
-            </span>
-
+            Modifier la campagne
           </router-link>
-
         </div>
 
 
@@ -200,7 +168,7 @@ const criteres = ref([
                 </h5>
 
                 <p class="text-muted mb-0">
-                  {{ campagne.description }}
+                  {{ campagnesStore.campagneActive?.description }}
                 </p>
 
               </div>
@@ -223,7 +191,7 @@ const criteres = ref([
                 </h5>
 
                 <span class="badge rounded-pill status-badge mb-3">
-                  {{ campagne.statut }}
+                  {{ campagnesStore.campagneActive?.status }}
                 </span>
 
                 <p class="text-muted fs-7 mb-0">
@@ -254,21 +222,6 @@ const criteres = ref([
 
             <div class="row g-4">
 
-              <!-- Catégorie -->
-
-              <div class="col-md-6">
-
-                <div class="info-label">
-                  Catégorie
-                </div>
-
-                <div class="info-value">
-                  {{ campagne.categorie }}
-                </div>
-
-              </div>
-
-
               <!-- Référentiel -->
 
               <div class="col-md-6">
@@ -278,7 +231,7 @@ const criteres = ref([
                 </div>
 
                 <div class="info-value">
-                  {{ campagne.referentiel }}
+                  {{ campagnesStore.campagneActive?.referentiel?.title }}
                 </div>
 
               </div>
@@ -293,11 +246,8 @@ const criteres = ref([
                 </div>
 
                 <div class="info-value d-flex align-items-center gap-2">
-
                   <i class="fa-regular fa-calendar text-muted"></i>
-
-                  {{ campagne.dateDebut }}
-
+                  {{ campagnesStore.campagneActive?.begin_date }}
                 </div>
 
               </div>
@@ -315,7 +265,7 @@ const criteres = ref([
 
                   <i class="fa-regular fa-calendar text-muted"></i>
 
-                  {{ campagne.dateFin }}
+                  {{ campagnesStore.campagneActive?.end_date }}
 
                 </div>
 
@@ -334,7 +284,6 @@ const criteres = ref([
 
                   <i class="fa-solid fa-users text-muted"></i>
 
-                  {{ campagne.candidats }}
 
                   candidats
 
@@ -374,7 +323,7 @@ const criteres = ref([
               </div>
 
               <span class="criteria-count">
-                {{ criteres.length }} critères
+                {{ campagnesStore.campagneActive?.criteres?.length || 0 }} critères
               </span>
 
             </div>
@@ -382,36 +331,20 @@ const criteres = ref([
 
             <!-- Liste des critères -->
 
-            <div class="d-flex flex-column gap-3">
-
+           <div class="d-flex flex-column gap-3">
               <div
-                v-for="(critere, index) in criteres"
+                v-for="(critere, index) in campagnesStore.campagneActive?.criteres"
                 :key="critere.id"
                 class="criterion-card"
               >
-
                 <div class="d-flex align-items-start gap-3">
-
-                  <div class="criterion-number">
-                    {{ index + 1 }}
-                  </div>
-
+                  <div class="criterion-number">{{ index + 1 }}</div>
                   <div>
-
-                    <h6 class="fw-bold text-dark-blue mb-1">
-                      {{ critere.nom }}
-                    </h6>
-
-                    <p class="text-muted fs-7 mb-0">
-                      {{ critere.description }}
-                    </p>
-
+                    <h6 class="fw-bold text-dark-blue mb-1">{{ critere.name }}</h6>
+                    <p class="text-muted fs-7 mb-0">{{ critere.description }}</p>
                   </div>
-
                 </div>
-
               </div>
-
             </div>
 
           </div>
@@ -430,14 +363,6 @@ const criteres = ref([
             class="btn btn-light rounded-3 px-4 py-2 fw-bold"
           >
             Retour
-          </router-link>
-
-          <router-link
-            to="/campagnes/update/"
-            class="btn btn-pink rounded-3 px-4 py-2 fw-bold"
-          >
-            <i class="fa-regular fa-pen-to-square me-2"></i>
-            Modifier la campagne
           </router-link>
 
         </div>

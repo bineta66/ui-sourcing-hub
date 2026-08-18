@@ -64,12 +64,12 @@ const router = createRouter({
       component: CreateCampagne
     },
     {
-      path: '/campagnes/update/',
+      path: '/campagnes/update/:id',
       name: 'update-campagne',
       component: UpdateCampagne
     },
     {
-      path: '/campagnes/detail/',
+      path: '/campagnes/detail/:id',
       name: 'detail-campagne',
       component: DetailCampagne
     },
