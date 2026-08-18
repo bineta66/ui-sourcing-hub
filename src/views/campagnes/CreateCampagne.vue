@@ -1,49 +1,147 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
+import { useAuthStore } from '@/stores/auth'
+import { createCampagne } from '@/api/endpoints/campagnes'
+import api from '@/api/axios'
 
-// Vue actuellement sélectionnée dans la sidebar
+const router = useRouter()
+const auth = useAuthStore()
+
 const currentView = ref('campagnes')
 
-// Données du formulaire
 const form = ref({
-  nom: 'Nouveau Projet',
+  nom: '',
   description: '',
   referentiel: 'Standard de l’entreprise',
-  dateDebut: '2026-08-12',
-  dateFin: '2026-08-25'
+  dateDebut: new Date().toISOString().split('T')[0],
+  dateFin: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  statut: 'brouillon'
 })
 
-// Liste des critères d'évaluation
-const criteres = ref([
-  {
-    id: 1,
-    nom: 'Nom',
-    description: 'Respect des standards de développement'
-  },
-  {
-    id: 2,
-    nom: 'Description',
-    description: ''
-  }
+const criteres = ref([])
+
+const statuts = ref([
+  { value: 'brouillon', label: 'Brouillon' },
+  { value: 'publiee', label: 'Publiée' },
+  { value: 'cloturee', label: 'Cloturée' }
 ])
 
-// Permet de changer de page depuis la sidebar
+const loading = ref(false)
+const errorMessage = ref('')
+
 const handleViewChange = (newView) => {
   currentView.value = newView
-  console.log('Navigation vers :', newView)
 }
 
+const handleLogout = () => {
+  auth.logout()
+  router.push('/login')
+}
 
-// Annuler
+const ajouterCritere = () => {
+  criteres.value.push({
+    id: Date.now(),
+    nom: '',
+    description: ''
+  })
+}
+
+const supprimerCritere = (id) => {
+  criteres.value = criteres.value.filter(
+    (critere) => critere.id !== id
+  )
+}
+
+const mapStatutToBackend = (statut) => {
+  const map = {
+    'À VENIR': 'brouillon',
+    'EN PROGRESSION': 'publiee',
+    'PASSÉ': 'cloturee'
+  }
+  return map[statut] || 'brouillon'
+}
+
+const getOrCreateReferentiel = async (title) => {
+  if (!title) return null
+  const { data } = await api.get('/api/referentiels/', {
+    params: { title }
+  })
+  const items = data.results || data
+  const existing = items.find(r => r.title === title)
+  if (existing) return existing.id
+
+  const { data: created } = await api.post('/api/referentiels/', {
+    title,
+    description: `Référentiel : ${title}`
+  })
+  return created.id
+}
+
+const createCriteres = async (criteresList) => {
+  const ids = []
+  for (const critere of criteresList) {
+    if (!critere.nom) continue
+    const { data } = await api.post('/api/criteres/', {
+      name: critere.nom,
+      description: critere.description || `Critère : ${critere.nom}`
+    })
+    ids.push(data.id)
+  }
+  return ids
+}
+
+const creerProjet = async () => {
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const referentielId = await getOrCreateReferentiel(form.value.referentiel)
+    if (!referentielId) {
+      throw new Error('Référentiel invalide ou vide.')
+    }
+
+    const criteresIds = await createCriteres(criteres.value)
+
+    const payload = {
+      title: form.value.nom,
+      description: form.value.description,
+      begin_date: form.value.dateDebut,
+      end_date: form.value.dateFin,
+      status: mapStatutToBackend(form.value.statut),
+      referentiel_id: referentielId,
+      criteres_ids: criteresIds
+    }
+
+    console.log('Payload campagne:', JSON.stringify(payload, null, 2))
+    await createCampagne(payload)
+    router.push('/campagnes')
+  } catch (err) {
+    console.error('Erreur création campagne:', err)
+    const data = err.response?.data
+    if (data) {
+      const messages = Object.entries(data)
+        .map(([key, value]) => {
+          if (Array.isArray(value)) return `${key}: ${value.join(', ')}`
+          if (value && typeof value === 'object') return `${key}: ${JSON.stringify(value)}`
+          return `${key}: ${value}`
+        })
+        .join(' | ')
+      errorMessage.value = messages || 'Erreur lors de la création'
+    } else {
+      errorMessage.value = err.message || 'Erreur lors de la création'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
 const annuler = () => {
-  console.log('Annulation du formulaire')
-  window.history.back()
+  router.back()
 }
 
-// Fermer le formulaire
 const fermer = () => {
-  window.history.back()
+  router.back()
 }
 </script>
 
@@ -115,11 +213,11 @@ const fermer = () => {
 
             <div class="user-information">
               <div class="user-name">
-                Ndeye
+                {{ auth.user?.first_name || auth.user?.username || 'Utilisateur' }}
               </div>
 
               <div class="user-role">
-                HR SUPERVISOR
+                {{ auth.user?.is_admin ? 'ADMIN' : 'UTILISATEUR' }}
               </div>
             </div>
 
@@ -211,19 +309,40 @@ const fermer = () => {
                   class="form-select custom-input reference-select"
                 >
                   <option>
-                    Standard de l’entreprise
+                Developement          
+                       </option>
+
+                  <option>
+                    Reference digital
                   </option>
 
                   <option>
-                    Standard ISO
-                  </option>
-
-                  <option>
-                    Standard interne
-                  </option>
+Reseau                  </option>
                 </select>
 
               </div>
+
+            </div>
+
+            <!-- Statut -->
+            <div>
+
+              <label class="custom-label">
+                Statut
+              </label>
+
+              <select
+                v-model="form.statut"
+                class="form-select custom-input"
+              >
+                <option
+                  v-for="statut in statuts"
+                  :key="statut.value"
+                  :value="statut.value"
+                >
+                  {{ statut.label }}
+                </option>
+              </select>
 
             </div>
 
@@ -367,34 +486,40 @@ const fermer = () => {
 
             </div>
 
-            <!-- =========================
-                 BOUTONS
-            ========================== -->
-            <div class="form-actions">
+             <!-- =========================
+                  BOUTONS
+             ========================== -->
+             <div class="form-actions">
 
-              <button
-                type="button"
-                class="btn btn-create"
-                @click="creerProjet"
-              >
-                Créer
-              </button>
+               <div v-if="errorMessage" class="alert alert-danger py-2 mb-3">
+                 {{ errorMessage }}
+               </div>
 
-              <button
-                type="button"
-                class="btn btn-cancel"
-                @click="annuler"
-              >
-                Annuler
-              </button>
+               <button
+                 type="button"
+                 class="btn btn-create"
+                 @click="creerProjet"
+                 :disabled="loading"
+               >
+                 <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+                 Créer
+               </button>
 
-            </div>
+               <button
+                 type="button"
+                 class="btn btn-cancel"
+                 @click="annuler"
+               >
+                 Annuler
+               </button>
 
-          </section>
+             </div>
 
-        </div>
+           </section>
 
-      </main>
+         </div>
+
+       </main>
 
     </div>
 

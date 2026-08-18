@@ -1,146 +1,101 @@
 <!-- views/OffreDashboard.vue -->
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import Sidebar from '@/components/Sidebar.vue'
 import DeleteCampagne from '@/components/DeleteCampagne.vue'
-import { onMounted } from 'vue'
 import { useCampagnesStore } from '@/stores/campagnes'
+import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+import { deleteCampagne } from '@/api/endpoints/campagnes'
 
-// Récupération des campagnes depuis le store
+const router = useRouter()
 const campagnesStore = useCampagnesStore()
+const auth = useAuthStore()
+
 onMounted(async () => {
   await campagnesStore.fetchCampagnes()
-  console.log(campagnesStore.items) 
 })
 
-
-
-
 const showDeleteModal = ref(false)
-
 const campagneASupprimer = ref(null)
-
 const suppressionEnCours = ref(false)
-
-// Fonction pour ouvrir le modal de suppression
-const ouvrirModalSuppression = (offer) => {
-
-  campagneASupprimer.value = offer
-
-  showDeleteModal.value = true
-
-}
-
-// Fonction pour fermer le modal de suppression
-const fermerModalSuppression = () => {
-
-  if (suppressionEnCours.value) {
-    return
-  }
-
-  showDeleteModal.value = false
-
-  campagneASupprimer.value = null
-
-}
-
-// Fonction pour confirmer la suppression
-const confirmerSuppression = () => {
-
-  suppressionEnCours.value = true
-
-  console.log(
-    'Suppression de la campagne :',
-    campagneASupprimer.value
-  )
-
-}
-// Gestion de la vue active
 const currentView = ref('campagnes')
 
 const handleViewChange = (newView) => {
   currentView.value = newView
-
-  // Logique de navigation / redirection si nécessaire
-  console.log('Navigation vers :', newView)
 }
 
 const handleLogout = () => {
-  console.log("Déconnexion de l'utilisateur")
+  auth.logout()
+  router.push('/login')
 }
 
-// Données fictives pour le tableau des offres
-const offers = ref([
-  {
-    id: 1,
-    title: 'Introduction à l’infrastructure cloud',
-    category: 'FORMATION TECHNIQUE',
-    categoryColor: '#2563EB',
-    categoryBg: '#EFF6FF',
-    icon: 'fa-solid fa-cloud',
-    description:
-      'Fondamentaux des modèles d’architecture AWS et Azure pour débutants...',
-    dates: 'Oct 24 - Nov 12',
-    durationDetail: 'Bientôt disponible',
-    candidatesCount: 42,
-    candidatesDetail: 'INSCRITS / INSCRITES',
-    status: 'À VENIR',
-    statusBg: '#FEF3C7',
-    statusColor: '#D97706'
-  },
-  {
-    id: 2,
-    title: 'Analyse avancée des données',
-    category: 'BUSINESS INTELLIGENCE',
-    categoryColor: '#9333EA',
-    categoryBg: '#F3E8FF',
-    icon: 'fa-solid fa-chart-line',
-    description:
-      'Maîtriser Python pour la visualisation de données et la prédiction...',
-    dates: 'Sep 01 - Oct 30',
-    durationDetail: '8 semaines restantes',
-    candidatesCount: 128,
-    candidatesDetail: 'INSCRITS / INSCRITES',
-    status: 'EN PROGRESSION',
-    statusBg: '#DCFCE7',
-    statusColor: '#16A34A'
-  },
-  {
-    id: 3,
-    title: 'Cybersécurité',
-    category: 'SERVICE DE SÉCURITÉ',
-    categoryColor: '#DC2626',
-    categoryBg: '#FEE2E2',
-    icon: 'fa-solid fa-shield-halved',
-    description:
-      'Fondamentaux de la détection des menaces et de la gestion des incidents...',
-    dates: 'Jan 10 - Feb 05',
-    durationDetail: 'Configuration en attente',
-    candidatesCount: 0,
-    candidatesDetail: "PAS D'INSCRIPTION",
-    status: 'PASSÉ',
-    statusBg: '#F3F4F6',
-    statusColor: '#6B7280'
-  },
-  {
-    id: 4,
-    title: 'Conception de produits UX/UI',
-    category: 'CREATIVE STUDIO',
-    categoryColor: '#D97706',
-    categoryBg: '#FEF3C7',
-    icon: 'fa-solid fa-laptop-code',
-    description:
-      "Cycle complet de conception de produit, de la recherche utilisateur jusqu'à...",
-    dates: 'Nov 15 - Dec 20',
-    durationDetail: 'Inscriptions ouvertes',
-    candidatesCount: 15,
-    candidatesDetail: 'INSCRITS / INSCRITES',
-    status: 'À VENIR',
-    statusBg: '#FEF3C7',
-    statusColor: '#D97706'
+const ouvrirModalSuppression = (offer) => {
+  campagneASupprimer.value = offer
+  showDeleteModal.value = true
+}
+
+const fermerModalSuppression = () => {
+  if (suppressionEnCours.value) {
+    return
   }
-])
+  showDeleteModal.value = false
+  campagneASupprimer.value = null
+}
+
+const confirmerSuppression = async () => {
+  suppressionEnCours.value = true
+  try {
+    await deleteCampagne(campagneASupprimer.value.id)
+    await campagnesStore.fetchCampagnes()
+    showDeleteModal.value = false
+    campagneASupprimer.value = null
+  } catch (err) {
+    console.error('Erreur suppression:', err)
+  } finally {
+    suppressionEnCours.value = false
+  }
+}
+
+const allCampagnes = computed(() => campagnesStore.items)
+
+const statusMap = {
+  'À VENIR': { bg: '#FEF3C7', color: '#D97706' },
+  'EN PROGRESSION': { bg: '#DCFCE7', color: '#16A34A' },
+  'PASSÉ': { bg: '#F3F4F6', color: '#6B7280' }
+}
+
+const getStatusStyle = (status) => statusMap[status] || { bg: '#F3F4F6', color: '#6B7280' }
+
+const displayCampagnes = computed(() => {
+  if (allCampagnes.value.length > 0) {
+    return allCampagnes.value.map(item => ({
+      id: item.id,
+      title: item.title || '',
+      category: item.referentiel?.title || 'GÉNÉRAL',
+      categoryColor: '#2563EB',
+      categoryBg: '#EFF6FF',
+      icon: 'fa-solid fa-bullhorn',
+      description: item.description || '',
+      dates: `${item.begin_date || ''} - ${item.end_date || ''}`,
+      durationDetail: 'Actif',
+      candidatesCount: 0,
+      candidatesDetail: 'CANDIDATS',
+      status: item.status ? {
+        'brouillon': 'À VENIR',
+        'publiee': 'EN PROGRESSION',
+        'cloturee': 'PASSÉ'
+      }[item.status] || item.status : 'À VENIR',
+      ...(item.status ? {
+        'brouillon': { bg: '#FEF3C7', color: '#D97706' },
+        'publiee': { bg: '#DCFCE7', color: '#16A34A' },
+        'cloturee': { bg: '#F3F4F6', color: '#6B7280' }
+      }[item.status] || { bg: '#F3F4F6', color: '#6B7280' } : { bg: '#F3F4F6', color: '#6B7280' })
+    }))
+  }
+  return []
+})
 </script>
 
 
@@ -210,11 +165,11 @@ const offers = ref([
             <div class="user-information">
 
               <div class="user-name">
-                Ndeye
+                {{ auth.user?.first_name || auth.user?.username || 'Utilisateur' }}
               </div>
 
               <div class="user-role">
-                HR SUPERVISOR
+                {{ auth.user?.is_admin ? 'ADMIN' : 'UTILISATEUR' }}
               </div>
 
             </div>
@@ -283,7 +238,7 @@ const offers = ref([
              STAT CARDS
         ========================== -->
 
-        <div class="d-flex gap-4 mb-4 flex-wrap" v-for="campagne in allCampagnes" :key="campagne.id">
+        <div class="d-flex gap-4 mb-4 flex-wrap" v-for="campagne in displayCampagnes" :key="campagne.id">
 
           <!-- Offres actives -->
 
@@ -296,7 +251,7 @@ const offers = ref([
             </span>
 
             <span class="stat-value text-dark-blue fw-black">
-              12
+              {{ campagne.candidatesCount }}
             </span>
 
           </div>
@@ -455,7 +410,7 @@ const offers = ref([
               <tbody>
 
                 <tr
-                  v-for="offer in offers"
+                  v-for="offer in displayCampagnes"
                   :key="offer.id"
                 >
 
@@ -591,7 +546,7 @@ const offers = ref([
                       <!-- Modifier -->
 
                       <router-link
-                        to="/campagnes/update/"
+                        :to="`/campagnes/update/${offer.id}`"
                         class="btn btn-light btn-sm rounded-3 shadow-xs text-primary"
                       >
 
@@ -603,7 +558,7 @@ const offers = ref([
                       <!-- Voir détails -->
 
                       <router-link
-                        to="/campagnes/detail/"
+                        :to="`/campagnes/detail/${offer.id}`"
                         class="btn btn-light btn-sm rounded-3 shadow-xs text-secondary"
                       >
 
@@ -847,7 +802,7 @@ const offers = ref([
 
   min-width: 0;
 
-  background-color: #F8FAFC;
+  background-color: #ffffff;
 }
 
 
@@ -963,7 +918,7 @@ const offers = ref([
 
   padding: 32px;
 
-  background-color: #F8FAFC;
+  background-color: #FFFFFF;
 }
 
 

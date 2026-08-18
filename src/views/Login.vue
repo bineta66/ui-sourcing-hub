@@ -120,22 +120,26 @@
               </a>
             </div>
 
-            <!-- Bouton -->
-            <button
-              type="submit"
-              class="btn w-100 fw-semibold text-white mb-0"
-              style="background-color: #D20C4F; border: none; height: 48px; font-size: 16px; border-radius: 6px; transition: background-color 0.2s;"
-              :disabled="loading"
-              @mouseenter="hoverBtn = true"
-              @mouseleave="hoverBtn = false"
-              :style="hoverBtn && !loading ? 'background-color: #b01a3f;' : 'background-color: #D20C4F;'"
-            >
-              <span v-if="loading">
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" style="width: 18px; height: 18px; border-width: 2px;"></span>
-                Connexion...
-              </span>
-              <span v-else>Connexion</span>
-            </button>
+          <div v-if="errorMessage" class="alert alert-danger" role="alert">
+            {{ errorMessage }}
+          </div>
+
+          <!-- Bouton -->
+          <button
+            type="submit"
+            class="btn w-100 fw-semibold text-white mb-0"
+            style="background-color: #D20C4F; border: none; height: 48px; font-size: 16px; border-radius: 6px; transition: background-color 0.2s;"
+            :disabled="loading"
+            @mouseenter="hoverBtn = true"
+            @mouseleave="hoverBtn = false"
+            :style="hoverBtn && !loading ? 'background-color: #b01a3f;' : 'background-color: #D20C4F;'"
+          >
+            <span v-if="loading">
+              <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" style="width: 18px; height: 18px; border-width: 2px;"></span>
+              Connexion...
+            </span>
+            <span v-else>Connexion</span>
+          </button>
 
           </form>
 
@@ -160,8 +164,10 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const form = reactive({
   email: '',
@@ -172,16 +178,19 @@ const form = reactive({
 const loading = ref(false)
 const showPassword = ref(false)
 const hoverBtn = ref(false)
+const errorMessage = ref('')
 
 const handleLogin = async () => {
   loading.value = true
+  errorMessage.value = ''
   try {
-    console.log('Email :', form.email)
-    console.log('Password :', form.password)
-    console.log('Remember :', form.remember)
-    await new Promise(resolve => setTimeout(resolve, 1500))
-  } catch (error) {
-    console.error('Erreur de connexion :', error)
+    await auth.login({
+      email: form.email,
+      password: form.password
+    })
+    router.push('/campagnes')
+  } catch (err) {
+    errorMessage.value = auth.error || 'Identifiants invalides'
   } finally {
     loading.value = false
   }
@@ -189,10 +198,6 @@ const handleLogin = async () => {
 
 const goToForgotPassword = () => {
   router.push('/mot-de-passe-oublie')
-}
-
-const forgotPassword = () => {
-  console.log('Mot de passe oublié')
 }
 </script>
 

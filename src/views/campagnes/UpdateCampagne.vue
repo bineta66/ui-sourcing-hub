@@ -1,48 +1,43 @@
 <!-- views/ModifierCampagne.vue -->
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
+import { useAuthStore } from '@/stores/auth'
+import { getCampagneById, updateCampagne } from '@/api/endpoints/campagnes'
+import api from '@/api/axios'
 
-// Vue active dans la sidebar
+const router = useRouter()
+const route = useRoute()
+const auth = useAuthStore()
+
 const currentView = ref('campagnes')
 
-// Données du formulaire
 const form = ref({
-  nom: 'Introduction à l’infrastructure cloud',
-  description:
-    'Fondamentaux des modèles d’architecture AWS et Azure pour débutants...',
+  nom: '',
+  description: '',
   referentiel: 'Standard de l’entreprise',
-  dateDebut: '2026-10-24',
-  dateFin: '2026-11-12',
+  dateDebut: '',
+  dateFin: '',
   statut: 'À VENIR'
 })
 
-// Critères d'évaluation
-const criteres = ref([
-  {
-    id: 1,
-    nom: 'Nom',
-    description: 'Respect des standards de développement'
-  },
-  {
-    id: 2,
-    nom: 'Description',
-    description: ''
-  }
-])
+const referentielId = ref(null)
+const criteres = ref([])
+const loading = ref(false)
+const errorMessage = ref('')
+const initialLoading = ref(true)
 
-// Gestion de la navigation de la sidebar
 const handleViewChange = (newView) => {
   currentView.value = newView
 }
 
-// Déconnexion
 const handleLogout = () => {
-  console.log('Déconnexion')
+  auth.logout()
+  router.push('/login')
 }
 
-// Ajouter un critère
 const ajouterCritere = () => {
   criteres.value.push({
     id: Date.now(),
@@ -51,30 +46,135 @@ const ajouterCritere = () => {
   })
 }
 
-// Supprimer un critère
 const supprimerCritere = (id) => {
   criteres.value = criteres.value.filter(
     (critere) => critere.id !== id
   )
 }
 
-// Modifier le projet
-const modifierProjet = () => {
-  console.log('Projet modifié :', {
-    ...form.value,
-    criteres: criteres.value
+const mapBackendStatusToFrontend = (status) => {
+  const map = {
+    'brouillon': 'À VENIR',
+    'publiee': 'EN PROGRESSION',
+    'cloturee': 'PASSÉ'
+  }
+  return map[status] || 'À VENIR'
+}
+
+const mapStatutToBackend = (statut) => {
+  const map = {
+    'À VENIR': 'brouillon',
+    'EN PROGRESSION': 'publiee',
+    'PASSÉ': 'cloturee'
+  }
+  return map[statut] || 'brouillon'
+}
+
+const loadCampagne = async () => {
+  initialLoading.value = true
+  errorMessage.value = ''
+  try {
+    const { data } = await getCampagneById(route.params.id)
+    form.value = {
+      nom: data.title || '',
+      description: data.description || '',
+      referentiel: data.referentiel?.title || 'Standard de l’entreprise',
+      dateDebut: data.begin_date || '',
+      dateFin: data.end_date || '',
+      statut: mapBackendStatusToFrontend(data.status)
+    }
+    referentielId.value = data.referentiel?.id || null
+    criteres.value = (data.criteres || []).map((c) => ({
+      id: c.id,
+      nom: c.name || '',
+      description: c.description || ''
+    }))
+  } catch (err) {
+    errorMessage.value = err.response?.data?.detail || 'Erreur lors du chargement'
+  } finally {
+    initialLoading.value = false
+  }
+}
+
+const getOrCreateReferentiel = async (title) => {
+  const { data } = await api.get('/api/referentiels/', {
+    params: { title }
   })
+  const items = data.results || data
+  const existing = items.find(r => r.title === title)
+  if (existing) return existing.id
+
+  const { data: created } = await api.post('/api/referentiels/', {
+    title,
+    description: `Référentiel : ${title}`
+  })
+  return created.id
 }
 
-// Annuler
+const createCriteres = async (criteresList) => {
+  const ids = []
+  for (const critere of criteresList) {
+    if (!critere.nom) continue
+    const { data } = await api.post('/api/criteres/', {
+      name: critere.nom,
+      description: critere.description || `Critère : ${critere.nom}`
+    })
+    ids.push(data.id)
+  }
+  return ids
+}
+
+const modifierProjet = async () => {
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const referentielIdValue = referentielId.value || await getOrCreateReferentiel(form.value.referentiel)
+    const criteresIds = await createCriteres(criteres.value)
+
+    const payload = {
+      title: form.value.nom,
+      description: form.value.description,
+      begin_date: form.value.dateDebut,
+      end_date: form.value.dateFin,
+      status: mapStatutToBackend(form.value.statut),
+      referentiel_id: referentielIdValue,
+      criteres_ids: criteresIds
+    }
+
+    console.log('Payload update campagne:', JSON.stringify(payload, null, 2))
+    await updateCampagne(route.params.id, payload)
+    router.push('/campagnes')
+  } catch (err) {
+    console.error('Erreur modification campagne:', err)
+    const data = err.response?.data
+    if (data) {
+      const messages = Object.entries(data)
+        .map(([key, value]) => {
+          if (Array.isArray(value)) return `${key}: ${value.join(', ')}`
+          if (value && typeof value === 'object') return `${key}: ${JSON.stringify(value)}`
+          return `${key}: ${value}`
+        })
+        .join(' | ')
+      errorMessage.value = messages || 'Erreur lors de la modification'
+    } else {
+      errorMessage.value = err.message || 'Erreur lors de la modification'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
 const annuler = () => {
-  window.history.back()
+  router.back()
 }
 
-// Fermer
 const fermer = () => {
-  window.history.back()
+  router.back()
 }
+
+onMounted(() => {
+  loadCampagne()
+})
 </script>
 
 <template>
@@ -132,11 +232,11 @@ const fermer = () => {
 
             <div class="user-information">
               <div class="user-name">
-                Ndeye
+                {{ auth.user?.first_name || auth.user?.username || 'Utilisateur' }}
               </div>
 
               <div class="user-role">
-                HR SUPERVISOR
+                {{ auth.user?.is_admin ? 'ADMIN' : 'UTILISATEUR' }}
               </div>
             </div>
 
@@ -155,9 +255,13 @@ const fermer = () => {
       <!-- =========================
            FORMULAIRE
       ========================== -->
-      <main class="form-page">
+      <main class="form-page" v-if="!initialLoading">
 
         <div class="form-card">
+
+          <div v-if="errorMessage" class="alert alert-danger mx-4 mt-4">
+            {{ errorMessage }}
+          </div>
 
           <!-- =========================
                INFORMATIONS GENERALES
@@ -430,7 +534,9 @@ const fermer = () => {
                 type="button"
                 class="btn btn-create"
                 @click="modifierProjet"
+                :disabled="loading"
               >
+                <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
                 Modifier
               </button>
 

@@ -1,10 +1,15 @@
 <!-- views/DetailCampagne.vue -->
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
+import { useAuthStore } from '@/stores/auth'
+import { getCampagneById } from '@/api/endpoints/campagnes'
 
-// Vue active dans la sidebar
+const route = useRoute()
+const auth = useAuthStore()
+
 const currentView = ref('campagnes')
 
 const handleViewChange = (newView) => {
@@ -12,44 +17,53 @@ const handleViewChange = (newView) => {
 }
 
 const handleLogout = () => {
-  console.log('Déconnexion de l’utilisateur')
+  auth.logout()
+  window.location.href = '/login'
 }
 
-// Données de la campagne
 const campagne = ref({
-  nom: 'Introduction à l’infrastructure cloud',
-
-  categorie: 'FORMATION TECHNIQUE',
-
-  description:
-    'Fondamentaux des modèles d’architecture AWS et Azure pour débutants. Cette formation permet de comprendre les concepts essentiels du cloud et les principales infrastructures utilisées dans les environnements professionnels.',
-
-  referentiel: 'Standard de l’entreprise',
-
-  dateDebut: '24 Octobre 2026',
-
-  dateFin: '12 Novembre 2026',
-
-  statut: 'À VENIR',
-
-  candidats: 42
+  nom: '',
+  categorie: '',
+  description: '',
+  referentiel: '',
+  dateDebut: '',
+  dateFin: '',
+  statut: '',
+  candidats: 0
 })
 
-// Critères d'évaluation
-const criteres = ref([
-  {
-    id: 1,
-    nom: 'Respect des standards de développement',
-    description:
-      'Évaluation du respect des standards et bonnes pratiques de développement.'
-  },
-  {
-    id: 2,
-    nom: 'Compréhension des concepts cloud',
-    description:
-      'Évaluation de la compréhension des principaux concepts liés au cloud.'
+const criteres = ref([])
+const loading = ref(true)
+const errorMessage = ref('')
+
+onMounted(async () => {
+  try {
+    const { data } = await getCampagneById(route.params.id)
+    campagne.value = {
+      nom: data.title || '',
+      categorie: data.referentiel?.title || '',
+      description: data.description || '',
+      referentiel: data.referentiel?.title || 'Standard de l’entreprise',
+      dateDebut: data.begin_date || '',
+      dateFin: data.end_date || '',
+      statut: data.status ? {
+        'brouillon': 'À VENIR',
+        'publiee': 'EN PROGRESSION',
+        'cloturee': 'PASSÉ'
+      }[data.status] || data.status : '',
+      candidats: 0
+    }
+    criteres.value = (data.criteres || []).map((c) => ({
+      id: c.id,
+      nom: c.name || '',
+      description: c.description || ''
+    }))
+  } catch (err) {
+    errorMessage.value = err.response?.data?.detail || 'Erreur lors du chargement'
+  } finally {
+    loading.value = false
   }
-])
+})
 </script>
 
 <template>
@@ -112,11 +126,11 @@ const criteres = ref([
             <div class="user-information">
 
               <div class="user-name">
-                Ndeye
+                {{ auth.user?.first_name || auth.user?.username || 'Utilisateur' }}
               </div>
 
               <div class="user-role">
-                HR SUPERVISOR
+                {{ auth.user?.is_admin ? 'ADMIN' : 'UTILISATEUR' }}
               </div>
 
             </div>
@@ -138,7 +152,13 @@ const criteres = ref([
            TITRE
       ========================== -->
 
-      <main class="detail-page">
+      <main class="detail-page" v-if="!loading">
+
+        <div v-if="errorMessage" class="alert alert-danger">
+          {{ errorMessage }}
+        </div>
+
+        <div v-else>
 
         <div
           class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 gap-3"
@@ -167,7 +187,7 @@ const criteres = ref([
           <!-- Bouton modifier -->
 
           <router-link
-            to="/campagnes/update/"
+            :to="`/campagnes/update/${route.params.id}`"
             class="btn btn-pink px-4 py-2 rounded-3 fw-bold d-flex align-items-center gap-2 shadow-sm"
           >
             <i class="fa-regular fa-pen-to-square"></i>
@@ -442,17 +462,16 @@ const criteres = ref([
 
         </div>
 
+        </div>
+
       </main>
 
     </div>
 
   </div>
-
 </template>
 
-
 <style scoped>
-
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.0/css/all.min.css');
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap');
