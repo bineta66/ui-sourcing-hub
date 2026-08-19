@@ -47,9 +47,11 @@ api.interceptors.response.use(
     const originalRequest = error.config
 
     // Check if error is 401, not already retried, and not an auth attempt (login/refresh)
-    const isAuthRequest = originalRequest?.url?.includes('/accounts/login/') || originalRequest?.url?.includes('/accounts/token/refresh/')
-    
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
+    const isAuthRequest =
+      originalRequest?.url?.includes('/accounts/login/') ||
+      originalRequest?.url?.includes('/accounts/token/refresh/')
+
+    if (error.response?.status === 401 && !originalRequest?._retry && !isAuthRequest) {
       const storage = getStorage()
       const refreshToken = storage.getItem('refresh_token')
 
@@ -105,7 +107,7 @@ api.interceptors.response.use(
         sessionStorage.removeItem('access_token')
         sessionStorage.removeItem('refresh_token')
         sessionStorage.removeItem('user')
-        
+
         // Redirect to login if in browser environment
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
           window.location.href = '/login'
@@ -116,30 +118,6 @@ api.interceptors.response.use(
       }
     }
 
-    return Promise.reject(error)
-  }
-)
-
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('auth_token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => Promise.reject(error)
-)
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_user')
-      delete api.defaults.headers.common.Authorization
-      window.location.href = '/login'
-    }
     return Promise.reject(error)
   }
 )

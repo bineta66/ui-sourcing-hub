@@ -18,122 +18,162 @@ import CandidateEntretiens from '../views/candidate/CandidateEntretiens.vue'
 import CandidateTests from '../views/candidate/CandidateTests.vue'
 import CandidateCandidature from '../views/candidate/CandidateCandidature.vue'
 import CandidateProfile from '../views/candidate/Profile.vue'
-import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      redirect: '/login'
+      name: 'Root',
+      redirect: () => {
+        const auth = useAuthStore()
+        if (!auth.isAuthenticated) return '/login'
+        return auth.isCandidate ? '/candidate/entretiens' : '/campagnes'
+      },
     },
+    // Routes Publiques / Visiteurs
     {
       path: '/login',
       name: 'Login',
-      component: Login
+      component: Login,
+      meta: { guestOnly: true },
     },
     {
       path: '/inscription',
       name: 'Inscription',
-      component: Inscription
+      component: Inscription,
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/activate',
+      name: 'Activate',
+      component: Inscription,
+      meta: { guestOnly: true },
     },
     {
       path: '/mot-de-passe-oublie',
       name: 'MotDePasseOublie',
-      component: MotDePasseOublie
+      component: MotDePasseOublie,
+      meta: { guestOnly: true },
     },
     {
-      path: '/creation-utilisateur',
-      name: 'CreationUtilisateur',
-      component: CreationUtilisateur
+      path: '/reset-password/:uid/:token',
+      name: 'ResetPasswordConfirm',
+      component: ResetPasswordConfirm,
+      meta: { guestOnly: true },
     },
+    // Formulaire de candidature public
+    {
+      path: '/candidature/:slug',
+      name: 'candidature',
+      component: Candidature,
+    },
+    // Espace Admin / Gestion Utilisateurs
     {
       path: '/gestion-utilisateurs',
       name: 'GestionUtilisateurs',
       component: GestionUtilisateurs,
-      meta: { requiresAuth: true, requiresAdmin: true }
+      meta: { requiresAuth: true, requiresAdmin: true, roles: ['ADMIN'] },
+    },
+    {
+      path: '/creation-utilisateur',
+      name: 'CreationUtilisateur',
+      component: CreationUtilisateur,
+      meta: { requiresAuth: true, requiresAdmin: true, roles: ['ADMIN'] },
     },
     {
       path: '/detail-utilisateur/:id',
       name: 'DetailUtilisateur',
       component: DetailUtilisateur,
-      meta: { requiresAuth: true, requiresAdmin: true }
+      meta: { requiresAuth: true, requiresAdmin: true, roles: ['ADMIN'] },
     },
+    // Espace Campagnes (Admin / Jury)
     {
       path: '/campagnes',
       name: 'campagnes',
       component: Campagnes,
-      meta: { requiresAuth: true, requiresAdmin: true }
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
     },
     {
       path: '/campagnes/create',
       name: 'create-campagne',
       component: CreateCampagne,
-      meta: { requiresAuth: true, requiresAdmin: true }
+      meta: { requiresAuth: true, requiresAdmin: true, roles: ['ADMIN'] },
     },
     {
-      path: '/campagnes/update/:id',
+      path: '/campagnes/update/:id?',
       name: 'update-campagne',
       component: UpdateCampagne,
-      meta: { requiresAuth: true, requiresAdmin: true }
+      meta: { requiresAuth: true, requiresAdmin: true, roles: ['ADMIN'] },
     },
     {
-      path: '/campagnes/detail/:id',
+      path: '/campagnes/detail/:id?',
       name: 'detail-campagne',
       component: DetailCampagne,
-      meta: { requiresAuth: true, requiresAdmin: true }
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
     },
     {
       path: '/form-builder/:campaignId?',
       name: 'campaign-form-builder',
       component: FormBuilderView,
-      meta: { requiresAuth: true, requiresAdmin: true }
+      meta: { requiresAuth: true, requiresAdmin: true, roles: ['ADMIN'] },
     },
-    {
-      path: '/candidature/:slug',
-      name: 'candidature',
-      component: Candidature
-    },
+    // Espace Candidat
     {
       path: '/candidate/entretiens',
       name: 'candidate-entretiens',
-      component: CandidateEntretiens
+      component: CandidateEntretiens,
+      meta: { requiresAuth: true, roles: ['CANDIDAT'] },
     },
     {
       path: '/candidate/tests',
       name: 'candidate-tests',
-      component: CandidateTests
+      component: CandidateTests,
+      meta: { requiresAuth: true, roles: ['CANDIDAT'] },
     },
     {
       path: '/candidate/candidature',
       name: 'candidate-candidature',
-      component: CandidateCandidature
+      component: CandidateCandidature,
+      meta: { requiresAuth: true, roles: ['CANDIDAT'] },
     },
     {
       path: '/candidate/profil',
       name: 'candidate-profile',
-      component: CandidateProfile
-    }
+      component: CandidateProfile,
+      meta: { requiresAuth: true, roles: ['CANDIDAT'] },
+    },
   ],
 })
 
-router.beforeEach(async (to, from) => {
+router.beforeEach((to, from) => {
   const auth = useAuthStore()
-  const requiresAuth = to.meta.requiresAuth
-  const requiresAdmin = to.meta.requiresAdmin
 
-  if (requiresAuth && !auth.isAuthenticated) {
-    return '/login'
+  const getDefaultHome = () => {
+    if (auth.isCandidate) return '/candidate/entretiens'
+    return '/campagnes'
   }
 
-  if (requiresAdmin && !auth.isAdmin) {
-    return '/login'
+  // Redirection des utilisateurs déjà connectés accédant à une page 'guestOnly'
+  if (to.meta.guestOnly && auth.isAuthenticated) {
+    return getDefaultHome()
   }
 
-  if (requiresAuth && auth.isAuthenticated) {
-    await auth.checkAuth()
-    if (requiresAdmin && !auth.isAdmin) {
-      return '/login'
+  // Redirection des utilisateurs non connectés accédant à une page protégée
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return {
+      path: '/login',
+      query: to.fullPath && to.fullPath !== '/' ? { redirect: to.fullPath } : undefined,
+    }
+  }
+
+  // Contrôle des rôles pour les pages protégées
+  if (to.meta.requiresAuth && auth.isAuthenticated) {
+    if (to.meta.requiresAdmin && !auth.isAdmin) {
+      return getDefaultHome()
+    }
+    if (to.meta.roles && Array.isArray(to.meta.roles) && !to.meta.roles.includes(auth.userRole)) {
+      return getDefaultHome()
     }
   }
 

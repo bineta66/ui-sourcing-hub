@@ -11,13 +11,11 @@
         </div>
       </div>
 
-     
-
       <nav class="nav-list d-flex flex-column gap-2">
         <router-link
           to="/candidate/entretiens"
           class="btn nav-btn w-100 d-flex align-items-center gap-3 px-3 py-2 text-start rounded-3"
-          :class="{ 'active': activeView === 'candidature' }"
+          :class="{ 'active': activeView === 'candidature' || activeView === 'entretiens' }"
         >
           <i class="fa-regular fa-user nav-icon"></i>
           <span class="nav-label">Ma candidature</span>
@@ -45,7 +43,7 @@
       <button
         type="button"
         class="btn logout-btn w-100 d-flex align-items-center gap-3 px-3 py-2 rounded-3 text-start text-white"
-        @click="emit('logout')"
+        @click="handleLogout"
       >
         <i class="fa-solid fa-right-from-bracket"></i>
         <span class="fw-bold">Déconnexion</span>
@@ -55,6 +53,9 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
 defineProps({
   activeView: {
     type: String,
@@ -64,6 +65,14 @@ defineProps({
 })
 
 const emit = defineEmits(['logout'])
+const router = useRouter()
+const authStore = useAuthStore()
+
+const handleLogout = async () => {
+  emit('logout')
+  await authStore.logout()
+  router.push('/login')
+}
 </script>
 
 <style scoped>
