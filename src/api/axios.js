@@ -9,24 +9,31 @@ const api = axios.create({
   },
 })
 
-// Helper to get active storage
 const getStorage = () => {
   return localStorage.getItem('access_token') ? localStorage : sessionStorage
 }
 
-// Request Interceptor: Attach JWT Access Token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
-    if (token && !config.headers.Authorization) {
-      config.headers.Authorization = `Bearer ${token}`
+    const isLoginOrRefresh =
+      config.url?.includes('/accounts/login/') ||
+      config.url?.includes('/accounts/token/refresh/')
+
+    if (!isLoginOrRefresh) {
+      const token =
+        localStorage.getItem('access_token') ||
+        sessionStorage.getItem('access_token')
+
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
     }
+
     return config
   },
   (error) => Promise.reject(error)
 )
 
-// Response Interceptor: Handle 401 & Silent Refresh Token
 let isRefreshing = false
 let failedQueue = []
 
@@ -46,17 +53,15 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    // Check if error is 401, not already retried, and not an auth attempt (login/refresh)
     const isAuthRequest =
       originalRequest?.url?.includes('/accounts/login/') ||
       originalRequest?.url?.includes('/accounts/token/refresh/')
 
-    if (error.response?.status === 401 && !originalRequest?._retry && !isAuthRequest) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
       const storage = getStorage()
       const refreshToken = storage.getItem('refresh_token')
 
       if (!refreshToken) {
-        // No refresh token available, purge and let caller handle error
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
         localStorage.removeItem('user')
@@ -67,7 +72,6 @@ api.interceptors.response.use(
       }
 
       if (isRefreshing) {
-        // Queue the request until refreshing finishes
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })
         })
@@ -108,7 +112,6 @@ api.interceptors.response.use(
         sessionStorage.removeItem('refresh_token')
         sessionStorage.removeItem('user')
 
-        // Redirect to login if in browser environment
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
           window.location.href = '/login'
         }

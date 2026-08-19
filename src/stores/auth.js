@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import api from '@/api/axios'
 import {
   loginApi,
   logoutApi,
@@ -10,6 +9,7 @@ import {
   requestPasswordResetApi,
   confirmPasswordResetApi,
 } from '@/api/endpoints/accounts'
+import api from '@/api/axios'
 
 const getStoredItem = (key) => {
   return localStorage.getItem(key) || sessionStorage.getItem(key) || null
@@ -53,9 +53,6 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    /**
-     * Connexion utilisateur
-     */
     async login({ email, password, remember = false }) {
       this.loading = true
       this.error = null
@@ -69,12 +66,10 @@ export const useAuthStore = defineStore('auth', {
         const storage = remember ? localStorage : sessionStorage
         const otherStorage = remember ? sessionStorage : localStorage
 
-        // Clear opposite storage to avoid desync
         otherStorage.removeItem('access_token')
         otherStorage.removeItem('refresh_token')
         otherStorage.removeItem('user')
 
-        // Set in target storage
         storage.setItem('access_token', data.access)
         storage.setItem('refresh_token', data.refresh)
         storage.setItem('user', JSON.stringify(data.user))
@@ -94,9 +89,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    /**
-     * Déconnexion
-     */
     async logout() {
       this.loading = true
       try {
@@ -111,9 +103,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    /**
-     * Nettoyage de la session locale
-     */
     clearSession() {
       this.user = null
       this.accessToken = null
@@ -130,9 +119,6 @@ export const useAuthStore = defineStore('auth', {
       delete api.defaults.headers.common.Authorization
     },
 
-    /**
-     * Invitation d'un utilisateur (Réservé ADMIN)
-     */
     async inviteUser({ email, role }) {
       this.loading = true
       this.error = null
@@ -152,9 +138,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    /**
-     * Activation du compte via le token reçu par email
-     */
     async activateAccount({ token, password, password_confirm }) {
       this.loading = true
       this.error = null
@@ -178,9 +161,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    /**
-     * Demande de réinitialisation de mot de passe
-     */
     async requestPasswordReset(email) {
       this.loading = true
       this.error = null
@@ -199,9 +179,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    /**
-     * Confirmation de réinitialisation de mot de passe
-     */
     async confirmPasswordReset({ uid, token, new_password, new_password_confirm }) {
       this.loading = true
       this.error = null
@@ -223,9 +200,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    /**
-     * Complétion du profil utilisateur
-     */
     async completeProfile({ first_name, last_name, phone_number }) {
       this.loading = true
       this.error = null
@@ -255,6 +229,30 @@ export const useAuthStore = defineStore('auth', {
           'Erreur lors de la mise à jour du profil.'
         this.error = detail
         throw err
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async checkAuth() {
+      if (!this.accessToken) {
+        return false
+      }
+
+      this.loading = true
+      this.error = null
+
+      try {
+        const { data } = await api.get('api/campagnes/')
+        return true
+      } catch (err) {
+        if (err.response?.status === 401) {
+          this.clearSession()
+          return false
+        }
+
+        this.error = err.message || 'Erreur lors de la vérification de la session.'
+        return false
       } finally {
         this.loading = false
       }

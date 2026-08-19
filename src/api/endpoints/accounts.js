@@ -5,7 +5,13 @@ import api from '../axios'
  * @param {Object} credentials - { email, password }
  * @returns {Promise} { access, refresh, user: { id, email, role } }
  */
-export const loginApi = (credentials) => api.post('api/accounts/login/', credentials)
+export const loginApi = (credentials) => {
+  const payload = {
+    ...credentials,
+    username: credentials.email,
+  }
+  return api.post('api/accounts/login/', payload)
+}
 
 /**
  * Authentification : Déconnexion et révocation du refresh token

@@ -167,7 +167,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
+const auth = useAuthStore()
 
 const form = reactive({
   email: '',
@@ -184,18 +184,23 @@ const handleLogin = async () => {
   errorMessage.value = ''
   loading.value = true
   try {
-    await authStore.login({
+    const response = await auth.login({
       email: form.email,
       password: form.password,
       remember: form.remember,
     })
 
+    console.log('Login response:', response)
+    console.log('Auth user:', auth.user)
+    console.log('Is admin:', auth.isAdmin)
+
     const defaultHome = authStore.isCandidate ? '/candidate/entretiens' : '/campagnes'
     const redirectPath = route.query.redirect || defaultHome
     router.push(redirectPath)
   } catch (error) {
+    console.error('Login error:', error)
     errorMessage.value =
-      authStore.error ||
+      auth.error ||
       'Impossible de se connecter. Vérifiez vos identifiants ou l\'état de votre compte.'
   } finally {
     loading.value = false

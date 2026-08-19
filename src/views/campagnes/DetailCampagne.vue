@@ -515,7 +515,7 @@ onMounted(() => {
 
   padding: 32px;
 
-  background-color: #F8FAFC;
+  background-color: #FFFFFF;
 }
 
 
