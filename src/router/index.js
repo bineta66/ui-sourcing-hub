@@ -9,7 +9,8 @@ import Campagnes from '../views/campagnes/CampagnesDashboard.vue'
 import CreateCampagne from '../views/campagnes/CreateCampagne.vue'
 import UpdateCampagne from '../views/campagnes/UpdateCampagne.vue'
 import DetailCampagne from '../views/campagnes/DetailCampagne.vue'
-
+import ListeCandidats from '@/views/candidats/ListeCandidats.vue'
+import DetailCandidat from '@/views/candidats/DetailCandidat.vue'
 // const routes = [
 //   {
 //     path: '/',
@@ -117,6 +118,16 @@ const router = createRouter({
     path: '/detail-utilisateur/:id',
     name: 'DetailUtilisateur',
     component: DetailUtilisateur
+  },
+  {
+    path: '/candidats',
+    name:  'liste-Candidats',
+    component: ListeCandidats
+  },
+  {
+    path: '/candidats/:id',
+    name:  'detail-Candidat',
+    component: DetailCandidat
   }
   ],
 })

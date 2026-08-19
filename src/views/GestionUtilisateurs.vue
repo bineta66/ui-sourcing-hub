@@ -14,7 +14,7 @@
             <span class="notification-dot"></span>
           </button>
           <div class="user-pill">
-            <div class="avatar">
+            <div class="avatar">ampagnes/detail
               <img src="https://ui-avatars.com/api/?name=Ndeye&background=D20C4F&color=fff&size=32" alt="Ndeye" />
             </div>
             <div class="user-meta">

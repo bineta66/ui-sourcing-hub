@@ -14,7 +14,7 @@ const emit = defineEmits(['logout'])
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', to: '/campagnes' },
   { id: 'entretien', label: 'Entretien', icon: 'fa-regular fa-calendar-check', to: '/campagnes' },
-  { id: 'candidates', label: 'Candidates', icon: 'fa-solid fa-user-group', to: '/gestion-utilisateurs' },
+  { id: 'candidats', label: 'Candidates', icon: 'fa-solid fa-user-group', to: '/candidats' },
   { id: 'campagnes', label: 'Campagnes', icon: 'fa-solid fa-file-lines', to: '/campagnes' },
   { id: 'utilisateurs', label: 'Utilisateurs', icon: 'fa-solid fa-users', to: '/gestion-utilisateurs' },
   { id: 'ai-analytics', label: 'AI Analytics', icon: 'fa-solid fa-brain', to: '/campagnes' },
