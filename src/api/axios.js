@@ -10,7 +10,10 @@ const api = axios.create({
 })
 
 const getStorage = () => {
-  return localStorage.getItem('access_token') ? localStorage : sessionStorage
+  if (localStorage.getItem('refresh_token') || localStorage.getItem('access_token')) {
+    return localStorage
+  }
+  return sessionStorage
 }
 
 api.interceptors.request.use(

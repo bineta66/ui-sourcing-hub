@@ -59,7 +59,7 @@ const urlInput = ref(null)
 
 const publicUrl = computed(() => {
   const base = window.location.origin
-  return `${base}/candidature/${props.slug}`
+  return `${base}/formulaire/${props.slug}`
 })
 
 const close = () => {

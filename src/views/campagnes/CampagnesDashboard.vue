@@ -450,6 +450,12 @@ const getStatutInfo = (status) => {
                   </th>
 
                   <th
+                    class="py-3 text-muted text-uppercase fs-7 fw-black"
+                  >
+                    RÉUNION D'INFORMATION
+                  </th>
+
+                  <th
                     class="py-3 text-muted text-uppercase fs-7 fw-black t"
                   >
                     ACTIONS
@@ -534,14 +540,14 @@ const getStatutInfo = (status) => {
                     <div
                       class="fw-black text-dark-blue fs-5 lh-1"
                     >
-                      {{ campagne.candidatesCount || 0 }}
+                      {{ campagne.nombre_candidatures ?? 0 }}
                     </div>
 
                     <span
                       class="text-muted text-uppercase fw-extrabold"
                       style="font-size: 10px;"
                     >
-                      {{ campagne.candidatesDetail || 'CANDIDATS' }}
+                      {{ (campagne.nombre_candidatures || 0) > 1 ? 'CANDIDATS' : 'CANDIDAT' }}
                     </span>
 
                   </td>
@@ -563,6 +569,25 @@ const getStatutInfo = (status) => {
                     </span>
                   </td>
 
+                  <td class="py-3">
+                    <div v-if="!campagne.reunion_information" class="badge bg-warning text-dark rounded-pill px-3 py-2 fs-7 fw-extrabold">
+                      Non planifiée
+                    </div>
+                    <div v-else class="d-flex flex-column gap-1">
+                      <span class="badge bg-success text-white rounded-pill px-3 py-2 fs-7 fw-extrabold">
+                        Planifiée
+                      </span>
+                      <span class="text-muted fs-7">
+                        {{ campagne.reunion_information.date }}
+                      </span>
+                      <span class="text-muted fs-7">
+                        {{ campagne.reunion_information.lieu }}
+                      </span>
+                      <span class="text-muted fs-7">
+                        {{ campagne.reunion_information.creneaux?.length || 0 }} créneau(x)
+                      </span>
+                    </div>
+                  </td>
 
                   <!-- =========================
                       ACTIONS

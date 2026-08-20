@@ -9,6 +9,30 @@
           <span class="questions-count">{{ totalQuestions }} question{{ totalQuestions !== 1 ? 's' : '' }}</span>
         </div>
 
+        <!-- Sélection de la Campagne liée -->
+        <div class="card p-3 mb-3 border-0 shadow-sm rounded-4">
+          <label class="form-label fw-bold text-dark-blue mb-1">
+            <i class="bi bi-bullseye me-1 text-primary"></i> Campagne associée <span class="text-danger">*</span>
+          </label>
+          <select
+            v-model="selectedCampaignId"
+            class="form-select"
+            @change="onCampaignChange"
+          >
+            <option :value="null" disabled>Sélectionner la campagne concernée par ce formulaire</option>
+            <option
+              v-for="camp in campagnesList"
+              :key="camp.id"
+              :value="camp.id"
+            >
+              {{ camp.title }} ({{ camp.status }})
+            </option>
+          </select>
+          <div v-if="!selectedCampaignId" class="form-text text-danger">
+            Veuillez associer ce formulaire à une campagne avant de le sauvegarder ou de le publier.
+          </div>
+        </div>
+
         <FormTitleCard
           :title="formTitle"
           :description="formDescription"
@@ -67,14 +91,15 @@
     </div>
 
     <FormPreview v-model="showPreview" />
-    <PublishModal v-model="showPublishModal" :slug="currentSlug" />
+    <PublishModal v-model="showPublishModal" :slug="formulaireIdForPublish" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFormBuilderStore } from '@/stores/formBuilder'
+import { getCampagnes } from '@/api/endpoints/campagnes'
 import FormHeader from '@/components/form-builder/FormHeader.vue'
 import FormTitleCard from '@/components/form-builder/FormTitleCard.vue'
 import FormSection from '@/components/form-builder/FormSection.vue'
@@ -88,35 +113,79 @@ const store = useFormBuilderStore()
 
 const showPreview = ref(false)
 const showPublishModal = ref(false)
-const currentSlug = ref('')
 const editingMeta = ref(false)
 const localTitle = ref(store.formTitle)
 const localDescription = ref(store.formDescription)
+const campagnesList = ref([])
 
-const slugify = (value) => {
-  return String(value)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+const { formTitle, formDescription, sections, totalQuestions, totalSections, selectedQuestionId, initForCampaign, loadFromBackend, publishToBackend } = store
+
+watch(() => localTitle.value, (val) => {
+  store.updateMeta({ title: val })
+})
+
+watch(() => localDescription.value, (val) => {
+  store.updateMeta({ description: val })
+})
+
+const selectedCampaignId = computed({
+  get: () => store.campaignId,
+  set: (val) => {
+    store.campaignId = val
+    const found = campagnesList.value.find(c => c.id === val)
+    if (found) {
+      store.campaignName = found.title
+      if (!store.formTitle || store.formTitle === 'Formulaire sans titre') {
+        store.formTitle = `Formulaire de candidature - ${found.title}`
+        localTitle.value = store.formTitle
+      }
+    }
+  }
+})
+
+const onCampaignChange = () => {
+  const found = campagnesList.value.find(c => c.id === store.campaignId)
+  if (found) {
+    store.campaignName = found.title
+  }
 }
 
-const { formTitle, formDescription, sections, totalQuestions, totalSections, selectedQuestionId, initForCampaign } = store
+const formulaireIdForPublish = computed(() => {
+  if (store.currentFormulaireId) {
+    return String(store.currentFormulaireId)
+  }
+  return route.params.formulaireId || route.params.campaignId || '1'
+})
 
-onMounted(() => {
-  const campaignParam = route.params.campaignId || route.query.campaignId
-  if (campaignParam && !store.campaignId) {
-    const campaigns = [
-      { id: 1, title: 'Formation Développeur Web — Promotion 2026' },
-      { id: 2, title: 'Formation Comptabilité et Finance' },
-      { id: 3, title: 'Formation en Ressources Humaines' },
-      { id: 4, title: 'Formation Marketing Digital' }
-    ]
-    const found = campaigns.find(c => c.id === Number(campaignParam))
-    if (found) {
-      initForCampaign(found)
+onMounted(async () => {
+  try {
+    const { data } = await getCampagnes()
+    campagnesList.value = data
+  } catch (err) {
+    console.error('Erreur lors du chargement des campagnes :', err)
+  }
+
+  const formulaireId = route.params.formulaireId
+  if (formulaireId) {
+    try {
+      await loadFromBackend(formulaireId)
+      localTitle.value = store.formTitle
+      localDescription.value = store.formDescription
+    } catch (err) {
+      console.error('Erreur lors du chargement du formulaire :', err)
+    }
+  } else {
+    const campaignParam = route.params.campaignId || route.query.campaignId
+    if (campaignParam) {
+      const numId = Number(campaignParam)
+      const found = campagnesList.value.find(c => c.id === numId)
+      if (found) {
+        initForCampaign(found)
+        localTitle.value = store.formTitle
+        localDescription.value = store.formDescription
+      } else {
+        selectedCampaignId.value = numId
+      }
     }
   }
 })
@@ -142,10 +211,10 @@ const handleAddQuestion = (sectionId) => {
   store.addQuestion(sectionId)
 }
 const handleAddQuestionToSelected = () => {
-  if (sections.value.length === 0) {
+  if (sections.length === 0) {
     store.addSection()
   }
-  const targetSection = sections.value[0]
+  const targetSection = sections[0]
   store.addQuestion(targetSection.id)
 }
 const handleUpdateQuestion = ({ sectionId, questionId, ...data }) => {
@@ -173,18 +242,13 @@ const handleSelectQuestion = (id) => {
   if (!store.selectedQuestionId) return
   store.selectedQuestionId.value = id
 }
-const handlePublish = () => {
-  console.log('handlePublish', store.campaignId, store.campaignName, store.formTitle)
-  const slugSource = store.campaignName || store.formTitle || 'candidature'
-  const slug = slugify(slugSource)
-  if (!slug) {
-    alert('Impossible de générer le lien du formulaire. Vérifiez le titre.')
-    return
+const handlePublish = async () => {
+  try {
+    await publishToBackend()
+    showPublishModal.value = true
+  } catch (err) {
+    alert(err.response?.data?.detail || 'Erreur lors de la publication du formulaire.')
   }
-  store.publishForm(slug)
-  currentSlug.value = slug
-  showPublishModal.value = true
-  console.log('publish modal', showPublishModal.value, currentSlug.value)
 }
 </script>
 

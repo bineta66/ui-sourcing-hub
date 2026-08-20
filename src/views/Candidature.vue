@@ -6,7 +6,7 @@
           <img src="@/assets/logo.png" alt="Sourcing HUB" class="candidature-logo" />
           <span class="candidature-brand-text">Sourcing HUB</span>
         </div>
-        <h1 class="candidature-title">{{ form.title || 'Candidature' }}</h1>
+        <h1 class="candidature-title">{{ form.titre || 'Candidature' }}</h1>
         <p v-if="form.description" class="candidature-desc">{{ form.description }}</p>
       </div>
 
@@ -24,77 +24,159 @@
         <router-link to="/login" class="btn btn-primary">Retour à l'accueil</router-link>
       </div>
 
-      <div v-else class="candidature-body">
-        <div v-for="question in form.questions" :key="question.id" class="candidature-question">
-          <label class="candidature-question-label">
-            {{ question.label }}
-            <span v-if="question.required" class="required-asterisk">*</span>
-          </label>
+      <div v-else-if="!form.publier || !form.actif" class="candidature-not-found">
+        <i class="bi bi-exclamation-triangle fs-1 text-warning d-block mb-3"></i>
+        <h2>Formulaire non disponible</h2>
+        <p class="text-muted">Ce formulaire n'est pas publié ou a été désactivé.</p>
+        <router-link to="/login" class="btn btn-primary">Retour à l'accueil</router-link>
+      </div>
 
-          <div class="candidature-question-input">
-            <input
-              v-if="['text', 'email', 'tel', 'number', 'date', 'time'].includes(question.type)"
-              :type="question.type"
-              class="form-control candidature-input"
-              :placeholder="'Votre ' + (question.type === 'text' ? 'réponse' : question.type)"
-              :value="answers[question.id]"
-              @input="updateAnswer(question.id, $event.target.value)"
-            />
-            <textarea
-              v-else-if="question.type === 'textarea'"
-              class="form-control candidature-input"
-              rows="3"
-              placeholder="Votre réponse"
-              :value="answers[question.id]"
-              @input="updateAnswer(question.id, $event.target.value)"
-            ></textarea>
-            <div v-else-if="question.type === 'radio'" class="candidature-options">
-              <div v-for="(option, idx) in question.options" :key="idx" class="candidature-option">
-                <input
-                  :id="'candidature-radio-' + question.id + '-' + idx"
-                  class="form-check-input"
-                  type="radio"
-                  :name="'candidature-radio-' + question.id"
-                  :value="option"
-                  :checked="answers[question.id] === option"
-                  @change="updateAnswer(question.id, option)"
-                />
-                <label :for="'candidature-radio-' + question.id + '-' + idx" class="candidature-option-label">
-                  {{ option }}
-                </label>
-              </div>
+      <div v-else-if="submittedSuccessfully" class="candidature-success text-center py-5 px-4">
+        <i class="bi bi-check-circle-fill text-success fs-1 d-block mb-3"></i>
+        <h2 class="fw-bold text-dark-blue mb-2">Candidature envoyée avec succès !</h2>
+        <p class="text-muted mb-4">
+          Votre candidature a bien été enregistrée pour la campagne <strong>{{ form.campagne_title || form.titre }}</strong>.
+          <br />
+          Vous serez informé(e) par email des prochaines étapes et de la réunion d'information.
+        </p>
+        <div class="alert alert-info d-inline-block text-start">
+          <i class="bi bi-info-circle me-2"></i>
+          <strong>Note :</strong> Aucune création de compte n'est requise à ce stade. Votre accès sera activé ultérieurement si votre présence à la réunion d'information est validée.
+        </div>
+      </div>
+
+      <div v-else class="candidature-body">
+        <!-- Section Identité du candidat si le formulaire ne contient pas de question email dédiée -->
+        <div v-if="!hasEmailQuestion" class="candidature-section mb-4">
+          <div class="candidature-section-title">Coordonnées du candidat</div>
+          <div class="candidature-section-desc">Veuillez renseigner vos coordonnées pour le traitement de votre candidature.</div>
+
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              <label class="candidature-question-label">
+                Nom <span class="required-asterisk">*</span>
+              </label>
+              <input
+                v-model="candidateIdentity.nom"
+                type="text"
+                class="form-control candidature-input"
+                placeholder="Votre nom"
+                required
+              />
             </div>
-            <div v-else-if="question.type === 'checkbox'" class="candidature-options">
-              <div v-for="(option, idx) in question.options" :key="idx" class="candidature-option">
-                <input
-                  :id="'candidature-check-' + question.id + '-' + idx"
-                  class="form-check-input"
-                  type="checkbox"
-                  :value="option"
-                  :checked="(answers[question.id] || []).includes(option)"
-                  @change="toggleCheckbox(question.id, option)"
-                />
-                <label :for="'candidature-check-' + question.id + '-' + idx" class="candidature-option-label">
-                  {{ option }}
-                </label>
-              </div>
+            <div class="col-md-6">
+              <label class="candidature-question-label">
+                Prénom <span class="required-asterisk">*</span>
+              </label>
+              <input
+                v-model="candidateIdentity.prenom"
+                type="text"
+                class="form-control candidature-input"
+                placeholder="Votre prénom"
+                required
+              />
             </div>
-            <select v-else-if="question.type === 'select'" class="form-select candidature-input" :value="answers[question.id]" @change="updateAnswer(question.id, $event.target.value)">
-              <option value="">Sélectionner...</option>
-              <option v-for="(option, idx) in question.options" :key="idx" :value="option">
-                {{ option }}
-              </option>
-            </select>
+            <div class="col-md-6">
+              <label class="candidature-question-label">
+                Adresse e-mail <span class="required-asterisk">*</span>
+              </label>
+              <input
+                v-model="candidateIdentity.email"
+                type="email"
+                class="form-control candidature-input"
+                placeholder="nom.prenom@example.com"
+                required
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="candidature-question-label">
+                Téléphone
+              </label>
+              <input
+                v-model="candidateIdentity.telephone"
+                type="tel"
+                class="form-control candidature-input"
+                placeholder="+221 ..."
+              />
+            </div>
+          </div>
+        </div>
+
+        <div v-for="section in form.sections" :key="section.id" class="candidature-section mb-4">
+          <div class="candidature-section-title">{{ section.titre }}</div>
+          <div v-if="section.description" class="candidature-section-desc">{{ section.description }}</div>
+
+          <div v-for="question in section.questions" :key="question.id" class="candidature-question">
+            <label class="candidature-question-label">
+              {{ question.texte }}
+              <span v-if="question.obligatoire" class="required-asterisk">*</span>
+            </label>
+
+            <div class="candidature-question-input">
+              <input
+                v-if="['TEXT', 'EMAIL', 'NUMBER', 'DATE', 'YES_NO'].includes(question.type_question)"
+                :type="inputType(question.type_question)"
+                class="form-control candidature-input"
+                :placeholder="'Votre réponse'"
+                :value="getAnswerValue(question)"
+                @input="updateAnswer(question, $event.target.value)"
+              />
+              <textarea
+                v-else-if="question.type_question === 'TEXTAREA'"
+                class="form-control candidature-input"
+                rows="3"
+                placeholder="Votre réponse"
+                :value="getAnswerValue(question)"
+                @input="updateAnswer(question, $event.target.value)"
+              ></textarea>
+              <div v-else-if="question.type_question === 'RADIO'" class="candidature-options">
+                <div v-for="(option, idx) in question.options" :key="option.id" class="candidature-option">
+                  <input
+                    :id="'candidature-radio-' + question.id + '-' + idx"
+                    class="form-check-input"
+                    type="radio"
+                    :name="'candidature-radio-' + question.id"
+                    :value="option.valeur"
+                    :checked="getAnswerValue(question) === option.valeur"
+                    @change="updateAnswer(question, option.valeur)"
+                  />
+                  <label :for="'candidature-radio-' + question.id + '-' + idx" class="candidature-option-label">
+                    {{ option.texte }}
+                  </label>
+                </div>
+              </div>
+              <div v-else-if="question.type_question === 'CHECKBOX'" class="candidature-options">
+                <div v-for="(option, idx) in question.options" :key="option.id" class="candidature-option">
+                  <input
+                    :id="'candidature-check-' + question.id + '-' + idx"
+                    class="form-check-input"
+                    type="checkbox"
+                    :value="option.valeur"
+                    :checked="(getAnswerValue(question) || []).includes(option.valeur)"
+                    @change="toggleCheckbox(question, option.valeur)"
+                  />
+                  <label :for="'candidature-check-' + question.id + '-' + idx" class="candidature-option-label">
+                    {{ option.texte }}
+                  </label>
+                </div>
+              </div>
+              <select v-else-if="question.type_question === 'SELECT'" class="form-select candidature-input" :value="getAnswerValue(question)" @change="updateAnswer(question, $event.target.value)">
+                <option value="">Sélectionner...</option>
+                <option v-for="option in question.options" :key="option.id" :value="option.valeur">
+                  {{ option.texte }}
+                </option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
-      <div v-if="formFound && !loading" class="candidature-footer">
+      <div v-if="formFound && !loading && form.publier && form.actif && !submittedSuccessfully" class="candidature-footer">
         <button class="btn btn-primary candidature-submit" @click="submitForm" :disabled="submitting">
           <span v-if="!submitting">Envoyer ma candidature</span>
           <span v-else class="d-flex align-items-center gap-2">
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            Envoi...
+            Envoi en cours...
           </span>
         </button>
       </div>
@@ -103,61 +185,182 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useFormBuilderStore } from '@/stores/formBuilder'
+import { getFormulaireById, soumettreReponses } from '@/api/endpoints/formulaires'
 
 const route = useRoute()
-const store = useFormBuilderStore()
 
 const loading = ref(true)
 const formFound = ref(false)
 const submitting = ref(false)
+const submittedSuccessfully = ref(false)
 const form = ref({})
 const answers = ref({})
 
-const slug = computed(() => route.params.slug)
+const candidateIdentity = reactive({
+  nom: '',
+  prenom: '',
+  email: '',
+  telephone: '',
+})
 
-const initAnswers = (questions) => {
-  const acc = {}
-  questions.forEach(q => {
-    if (q.type === 'checkbox') {
-      acc[q.id] = []
+const formulaireId = computed(() => route.params.id)
+
+// Détermine si le formulaire contient déjà une question pour l'adresse email
+const hasEmailQuestion = computed(() => {
+  for (const section of form.value.sections || []) {
+    for (const q of section.questions || []) {
+      const qLower = (q.texte || '').toLowerCase()
+      if (q.type_question === 'EMAIL' || qLower.includes('email') || qLower.includes('e-mail')) {
+        return true
+      }
     }
+  }
+  return false
+})
+
+const inputType = (type) => {
+  const map = {
+    TEXT: 'text',
+    EMAIL: 'email',
+    NUMBER: 'number',
+    DATE: 'date',
+    YES_NO: 'text',
+  }
+  return map[type] || 'text'
+}
+
+const getAnswerValue = (question) => {
+  return answers.value[question.id] ?? ''
+}
+
+const initAnswers = (sections) => {
+  const acc = {}
+  sections.forEach(section => {
+    section.questions.forEach(q => {
+      if (q.type_question === 'CHECKBOX') {
+        acc[q.id] = []
+      }
+    })
   })
   answers.value = acc
 }
 
-const updateAnswer = (questionId, value) => {
-  answers.value[questionId] = value
+const updateAnswer = (question, value) => {
+  answers.value[question.id] = value
 }
 
-const toggleCheckbox = (questionId, option) => {
-  const current = answers.value[questionId] || []
+const toggleCheckbox = (question, option) => {
+  const current = answers.value[question.id] || []
   const next = current.includes(option)
     ? current.filter(item => item !== option)
     : [...current, option]
-  answers.value[questionId] = next
+  answers.value[question.id] = next
 }
 
-onMounted(() => {
-  const data = store.getPublishedFormBySlug(slug.value)
-  if (data && data.questions && data.questions.length) {
-    formFound.value = true
+onMounted(async () => {
+  try {
+    const { data } = await getFormulaireById(formulaireId.value)
     form.value = data
-    initAnswers(data.questions)
+    formFound.value = true
+    initAnswers(data.sections || [])
+  } catch (err) {
+    formFound.value = false
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 })
 
-const submitForm = () => {
+/**
+ * Soumission du formulaire public :
+ * - Aucun JWT ni authentification requis.
+ * - Crée une candidature avec le statut EN_ATTENTE liée à la campagne.
+ * - Le compte utilisateur n'est PAS créé ici.
+ */
+const submitForm = async () => {
   if (submitting.value) return
+
+  // Validation si les coordonnées sont saisies via la section Coordonnées
+  if (!hasEmailQuestion.value) {
+    if (!candidateIdentity.nom.trim() || !candidateIdentity.prenom.trim() || !candidateIdentity.email.trim()) {
+      alert('Veuillez renseigner votre nom, prénom et adresse email.')
+      return
+    }
+  }
+
   submitting.value = true
-  setTimeout(() => {
+  try {
+    const reponses = []
+    let detectedEmail = candidateIdentity.email.trim()
+    let detectedNom = candidateIdentity.nom.trim()
+    let detectedPrenom = candidateIdentity.prenom.trim()
+    let detectedTelephone = candidateIdentity.telephone.trim()
+
+    for (const section of form.value.sections || []) {
+      for (const question of section.questions || []) {
+        const valeur = answers.value[question.id]
+        const qLower = (question.texte || '').toLowerCase()
+        const strVal = String(valeur ?? '').trim()
+
+        if (!detectedEmail && (question.type_question === 'EMAIL' || qLower.includes('email') || qLower.includes('e-mail'))) {
+          detectedEmail = strVal
+        }
+        if (!detectedNom && (qLower.includes('nom') && !qLower.includes('prénom') && !qLower.includes('prenom'))) {
+          detectedNom = strVal
+        }
+        if (!detectedPrenom && (qLower.includes('prénom') || qLower.includes('prenom'))) {
+          detectedPrenom = strVal
+        }
+        if (!detectedTelephone && (qLower.includes('téléphone') || qLower.includes('telephone') || qLower.includes('tel'))) {
+          detectedTelephone = strVal
+        }
+
+        if (question.type_question === 'CHECKBOX') {
+          reponses.push({
+            question: question.id,
+            options: Array.isArray(valeur) ? valeur.map(v => {
+              const opt = question.options.find(o => o.valeur === v)
+              return opt ? opt.id : null
+            }).filter(Boolean) : []
+          })
+        } else if (question.type_question === 'RADIO' || question.type_question === 'SELECT') {
+          const opt = question.options.find(o => o.valeur === valeur)
+          reponses.push({
+            question: question.id,
+            options: opt ? [opt.id] : []
+          })
+        } else {
+          reponses.push({
+            question: question.id,
+            valeur: strVal
+          })
+        }
+      }
+    }
+
+    const payload = {
+      nom: detectedNom,
+      prenom: detectedPrenom,
+      email: detectedEmail,
+      telephone: detectedTelephone,
+      reponses,
+    }
+
+    await soumettreReponses(formulaireId.value, payload)
+    submittedSuccessfully.value = true
+  } catch (err) {
+    const errorData = err.response?.data
+    if (errorData?.detail) {
+      alert(errorData.detail)
+    } else if (errorData?.email) {
+      alert(`Email: ${Array.isArray(errorData.email) ? errorData.email.join(', ') : errorData.email}`)
+    } else {
+      alert('Erreur lors de l\'envoi du formulaire.')
+    }
+  } finally {
     submitting.value = false
-    alert('Votre candidature a été enregistrée avec succès.')
-    initAnswers(form.value.questions)
-  }, 800)
+  }
 }
 </script>
 
@@ -226,6 +429,23 @@ const submitForm = () => {
 
 .candidature-body {
   padding: 28px 32px 0;
+}
+
+.candidature-section {
+  margin-bottom: 24px;
+}
+
+.candidature-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.candidature-section-desc {
+  font-size: 13px;
+  color: #6B7280;
+  margin-bottom: 12px;
 }
 
 .candidature-question {

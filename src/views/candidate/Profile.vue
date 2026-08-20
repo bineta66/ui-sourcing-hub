@@ -207,14 +207,19 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import CandidateSidebar from '@/components/CandidateSidebar.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const router = useRouter()
+const authStore = useAuthStore()
 
 const profile = reactive({
-  firstName: 'Bineta',
-  lastName: 'Badiane',
-  email: 'bineta.badiane@email.com',
-  phone: '+221 77 123 45 67',
+  firstName: authStore.user?.first_name || 'Bineta',
+  lastName: authStore.user?.last_name || 'Badiane',
+  email: authStore.user?.email || 'bineta.badiane@email.com',
+  phone: authStore.user?.phone_number || '+221 77 123 45 67',
   birthDate: '12/05/2001',
   address: 'Dakar, Sénégal',
   avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop',
@@ -230,6 +235,7 @@ const profile = reactive({
 const showEditModal = ref(false)
 const avatarPreview = ref('')
 const avatarFile = ref(null)
+const isSaving = ref(false)
 
 const form = reactive({
   firstName: profile.firstName,
@@ -248,8 +254,18 @@ const form = reactive({
   }
 })
 
-const handleLogout = () => {
-  console.log("Déconnexion de l'utilisateur")
+onMounted(() => {
+  if (authStore.user) {
+    if (authStore.user.first_name) profile.firstName = authStore.user.first_name
+    if (authStore.user.last_name) profile.lastName = authStore.user.last_name
+    if (authStore.user.email) profile.email = authStore.user.email
+    if (authStore.user.phone_number) profile.phone = authStore.user.phone_number
+  }
+})
+
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
 }
 
 const openEditModal = () => {
@@ -283,23 +299,37 @@ const onAvatarChange = (event) => {
   avatarPreview.value = URL.createObjectURL(file)
 }
 
-const saveProfile = () => {
-  profile.firstName = form.firstName
-  profile.lastName = form.lastName
-  profile.email = form.email
-  profile.phone = form.phone
-  profile.birthDate = form.birthDate
-  profile.address = form.address
-  profile.academic.educationLevel = form.academic.educationLevel
-  profile.academic.field = form.academic.field
-  profile.academic.speciality = form.academic.speciality
-  profile.academic.institution = form.academic.institution
-  profile.academic.graduationYear = form.academic.graduationYear
-  if (avatarFile.value) {
-    profile.avatarUrl = avatarPreview.value
+const saveProfile = async () => {
+  isSaving.value = true
+  try {
+    if (authStore.isAuthenticated) {
+      await authStore.completeProfile({
+        first_name: form.firstName,
+        last_name: form.lastName,
+        phone_number: form.phone,
+      })
+    }
+    profile.firstName = form.firstName
+    profile.lastName = form.lastName
+    profile.email = form.email
+    profile.phone = form.phone
+    profile.birthDate = form.birthDate
+    profile.address = form.address
+    profile.academic.educationLevel = form.academic.educationLevel
+    profile.academic.field = form.academic.field
+    profile.academic.speciality = form.academic.speciality
+    profile.academic.institution = form.academic.institution
+    profile.academic.graduationYear = form.academic.graduationYear
+    if (avatarFile.value) {
+      profile.avatarUrl = avatarPreview.value
+    }
+    alert('Profil mis à jour avec succès.')
+    closeEditModal()
+  } catch (err) {
+    alert(authStore.error || 'Erreur lors de la mise à jour du profil.')
+  } finally {
+    isSaving.value = false
   }
-  alert('Profil mis à jour avec succès.')
-  closeEditModal()
 }
 </script>
 

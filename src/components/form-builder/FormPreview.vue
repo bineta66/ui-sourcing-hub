@@ -26,8 +26,8 @@
                 </label>
                 <div class="preview-question-input">
                   <input
-                    v-if="['text', 'email', 'tel', 'number', 'date', 'time'].includes(question.type)"
-                    :type="question.type"
+                    v-if="['text', 'email', 'tel', 'number', 'date', 'time', 'yes_no'].includes(question.type)"
+                    :type="question.type === 'yes_no' ? 'text' : question.type"
                     class="form-control preview-input"
                     :placeholder="'Votre ' + (question.type === 'text' ? 'réponse' : question.type)"
                   />

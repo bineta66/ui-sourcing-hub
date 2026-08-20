@@ -102,14 +102,18 @@ const creerProjet = async () => {
   } catch (err) {
     const data = err.response?.data
     if (data) {
-      const messages = Object.entries(data)
-        .map(([key, value]) => {
-          if (Array.isArray(value)) return `${key}: ${value.join(', ')}`
-          if (value && typeof value === 'object') return `${key}: ${JSON.stringify(value)}`
-          return `${key}: ${value}`
-        })
-        .join(' | ')
-      submitError.value = messages || 'Une erreur est survenue lors de la création.'
+      if (data.detail) {
+        submitError.value = data.detail
+      } else {
+        const messages = Object.entries(data)
+          .map(([key, value]) => {
+            if (Array.isArray(value)) return `${key}: ${value.join(', ')}`
+            if (value && typeof value === 'object') return `${key}: ${JSON.stringify(value)}`
+            return `${key}: ${value}`
+          })
+          .join(' | ')
+        submitError.value = messages || 'Une erreur est survenue lors de la création.'
+      }
     } else {
       submitError.value = err.message || 'Une erreur est survenue lors de la création.'
     }

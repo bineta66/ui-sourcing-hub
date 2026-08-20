@@ -199,10 +199,11 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import { useAuthStore } from '@/stores/auth'
+import { getUserById, updateUser } from '@/services/userService'
 
 const route = useRoute()
 const router = useRouter()
@@ -224,12 +225,34 @@ const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
+const userId = route.query.id ? Number(route.query.id) : null
+if (userId) {
+  isEditMode.value = true
+}
+
 // Mapping role frontend -> role backend
 const mapRoleToBackend = (role) => {
   const normalized = (role || '').toLowerCase()
   if (normalized === 'admin') return 'ADMIN'
   if (normalized === 'jury') return 'JURY'
   return 'CANDIDAT'
+}
+
+const mapRoleFromBackend = (role) => {
+  const normalized = (role || '').toUpperCase()
+  if (normalized === 'ADMIN') return 'admin'
+  if (normalized === 'JURY') return 'jury'
+  return 'candidate'
+}
+
+const prefillForm = (user) => {
+  form.firstname = user.first_name || ''
+  form.lastname = user.last_name || ''
+  form.email = user.email || ''
+  form.phone = user.phone_number || ''
+  form.referentiel = user.referentiel || ''
+  form.role = mapRoleFromBackend(user.role)
+  form.status = user.is_active ? 'active' : 'inactive'
 }
 
 const handleSubmit = async () => {
@@ -244,24 +267,54 @@ const handleSubmit = async () => {
   loading.value = true
   try {
     const backendRole = mapRoleToBackend(form.role)
-    const res = await authStore.inviteUser({
-      email: form.email,
-      role: backendRole,
-    })
 
-    successMessage.value =
-      res?.detail || `Invitation envoyée avec succès à ${form.email} (${backendRole}).`
+    if (isEditMode.value && userId) {
+      await updateUser(userId, {
+        first_name: form.firstname,
+        last_name: form.lastname,
+        email: form.email,
+        phone_number: form.phone,
+        role: backendRole,
+        is_active: form.status === 'active',
+      })
+      successMessage.value = "Utilisateur mis à jour avec succès."
+      setTimeout(() => {
+        router.push('/gestion-utilisateurs')
+      }, 2000)
+    } else {
+      const res = await authStore.inviteUser({
+        email: form.email,
+        role: backendRole,
+      })
 
-    setTimeout(() => {
-      router.push('/gestion-utilisateurs')
-    }, 2000)
+      successMessage.value =
+        res?.detail || `Invitation envoyée avec succès à ${form.email} (${backendRole}).`
+
+      setTimeout(() => {
+        router.push('/gestion-utilisateurs')
+      }, 2000)
+    }
   } catch (err) {
     errorMessage.value =
-      authStore.error || "Erreur lors de l'envoi de l'invitation à l'utilisateur."
+      authStore.error ||
+      err.response?.data?.detail ||
+      "Erreur lors de l'envoi de l'invitation à l'utilisateur."
   } finally {
     loading.value = false
   }
 }
+
+onMounted(async () => {
+  if (userId) {
+    try {
+      const response = await getUserById(userId)
+      prefillForm(response.data)
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      errorMessage.value = detail || "Erreur lors du chargement de l'utilisateur."
+    }
+  }
+})
 </script>
 
 <style scoped>

@@ -4,12 +4,20 @@
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
-import { useCampagnesStore } from '@/stores/campagnes'
+import { useCampagneStore } from '@/stores/campagnes'
+import { getReunionInformation, getCreneaux } from '@/api/endpoints/reunionInformation'
+import ReunionInformationCard from '@/components/reunion/ReunionInformationCard.vue'
 
+// Récupération de l'identifiant de la campagne depuis la route
 const route = useRoute()
-const campagnesStore = useCampagnesStore()
+const campagneId = route.params.id
+
+// Initialisation du store Pinia des campagnes
+const campagneStore = useCampagneStore()
 
 const currentView = ref('campagnes')
+const reunion = ref(null)
+const creneauxCount = ref(0)
 
 const handleViewChange = (newView) => {
   currentView.value = newView
@@ -19,8 +27,52 @@ const handleLogout = () => {
   window.location.href = '/login'
 }
 
-onMounted(() => {
-  campagnesStore.fetchCampagneById(route.params.id)
+const fetchCreneauxCount = async (reunionId) => {
+  if (!reunionId) {
+    creneauxCount.value = 0
+    return
+  }
+  try {
+    const { data } = await getCreneaux(reunionId)
+    creneauxCount.value = data.length
+  } catch {
+    creneauxCount.value = 0
+  }
+}
+
+const fetchReunion = async () => {
+  if (!campagneId) return
+  try {
+    const { data } = await getReunionInformation(Number(campagneId))
+    reunion.value = data
+    await fetchCreneauxCount(data.id)
+  } catch (err) {
+    if (err.response?.status === 404) {
+      reunion.value = null
+      creneauxCount.value = 0
+    }
+  }
+}
+
+const handleReunionUpdated = (reunionData) => {
+  if (reunionData) {
+    reunion.value = reunionData
+    fetchCreneauxCount(reunionData.id)
+  } else {
+    fetchReunion()
+  }
+}
+
+// Au chargement du composant, récupération de la campagne depuis l'API via le store
+onMounted(async () => {
+  if (campagneId) {
+    try {
+      await campagneStore.getCampagne(campagneId)
+    } catch (err) {
+      console.error('Erreur lors de la récupération de la campagne :', err)
+    }
+    fetchReunion()
+  }
 })
 </script>
 <template>
@@ -105,17 +157,23 @@ onMounted(() => {
       </header>
 
 
-      <!-- =========================
-           TITRE
-      ========================== -->
-
-      <main class="detail-page" v-if="!loading">
-
-        <div v-if="errorMessage" class="alert alert-danger">
-          {{ errorMessage }}
+      <!-- Indicateur de chargement -->
+      <div v-if="campagneStore.loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Chargement...</span>
         </div>
+        <p class="mt-2 text-muted">Chargement des détails de la campagne...</p>
+      </div>
 
-        <div v-else>
+      <!-- Message d'erreur -->
+      <div v-else-if="campagneStore.error" class="alert alert-danger m-4">
+        {{ campagneStore.error.message || campagneStore.error }}
+      </div>
+
+      <!-- Contenu de la campagne -->
+      <main class="detail-page" v-else-if="campagneStore.campagneActive">
+
+        <div>
 
         <div
           class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 gap-3"
@@ -126,11 +184,11 @@ onMounted(() => {
             <div class="d-flex align-items-center gap-3 mb-2">
 
               <h1 class="h2 fw-black text-dark-blue mb-0">
-                {{ campagnesStore.campagneActive?.title }}
+                {{ campagneStore.campagneActive.title }}
               </h1>
 
               <span class="badge rounded-pill status-badge">
-                {{ campagnesStore.campagneActive?.status }}
+                {{ campagneStore.campagneActive.status }}
               </span>
 
             </div>
@@ -172,7 +230,7 @@ onMounted(() => {
                 </h5>
 
                 <p class="text-muted mb-0">
-                  {{ campagnesStore.campagneActive?.description }}
+                  {{ campagneStore.campagneActive.description }}
                 </p>
 
               </div>
@@ -195,7 +253,7 @@ onMounted(() => {
                 </h5>
 
                 <span class="badge rounded-pill status-badge mb-3">
-                  {{ campagnesStore.campagneActive?.status }}
+                  {{ campagneStore.campagneActive.status }}
                 </span>
 
                 <p class="text-muted fs-7 mb-0">
@@ -235,7 +293,7 @@ onMounted(() => {
                 </div>
 
                 <div class="info-value">
-                  {{ campagnesStore.campagneActive?.referentiel?.title }}
+                  {{ campagneStore.campagneActive.referentiel?.title || 'Aucun référentiel' }}
                 </div>
 
               </div>
@@ -251,7 +309,7 @@ onMounted(() => {
 
                 <div class="info-value d-flex align-items-center gap-2">
                   <i class="fa-regular fa-calendar text-muted"></i>
-                  {{ campagnesStore.campagneActive?.begin_date }}
+                  {{ campagneStore.campagneActive.begin_date }}
                 </div>
 
               </div>
@@ -269,7 +327,7 @@ onMounted(() => {
 
                   <i class="fa-regular fa-calendar text-muted"></i>
 
-                  {{ campagnesStore.campagneActive?.end_date }}
+                  {{ campagneStore.campagneActive.end_date }}
 
                 </div>
 
@@ -288,8 +346,7 @@ onMounted(() => {
 
                   <i class="fa-solid fa-users text-muted"></i>
 
-
-                  candidats
+                  {{ campagneStore.campagneActive.nombre_candidatures ?? campagneStore.campagneActive.candidatures?.length ?? 0 }} candidat{{ (campagneStore.campagneActive.nombre_candidatures ?? campagneStore.campagneActive.candidatures?.length ?? 0) > 1 ? 's' : '' }}
 
                 </div>
 
@@ -327,7 +384,7 @@ onMounted(() => {
               </div>
 
               <span class="criteria-count">
-                {{ campagnesStore.campagneActive?.criteres?.length || 0 }} critères
+                {{ campagneStore.campagneActive.criteres?.length || 0 }} critères
               </span>
 
             </div>
@@ -337,7 +394,7 @@ onMounted(() => {
 
            <div class="d-flex flex-column gap-3">
               <div
-                v-for="(critere, index) in campagnesStore.campagneActive?.criteres"
+                v-for="(critere, index) in campagneStore.campagneActive.criteres"
                 :key="critere.id"
                 class="criterion-card"
               >
@@ -349,6 +406,101 @@ onMounted(() => {
                   </div>
                 </div>
               </div>
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- =========================
+             REUNION D'INFORMATION
+        ========================== -->
+
+        <ReunionInformationCard
+          :campagne-id="Number(route.params.id)"
+          :reunion="reunion"
+          :creneaux-count="creneauxCount"
+          @updated="handleReunionUpdated"
+        />
+
+
+        <!-- =========================
+             FORMULAIRE DE CANDIDATURE
+        ========================== -->
+
+        <div class="card border-0 shadow-sm rounded-5 mb-4">
+
+          <div class="card-body p-4">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+
+              <div>
+
+                <h5 class="fw-black text-dark-blue mb-1">
+                  Formulaire de candidature
+                </h5>
+
+                <p class="text-muted fs-7 mb-0">
+                  Construisez le formulaire que les candidats rempliront.
+                </p>
+
+              </div>
+
+              <router-link
+                :to="`/form-builder/${route.params.id}`"
+                class="btn btn-pink rounded-3 px-4 py-2 fw-bold"
+              >
+                <i class="fa-regular fa-pen-to-square"></i>
+                {{ campagneStore.campagneActive.formulaire ? 'Modifier le formulaire' : 'Créer le formulaire' }}
+              </router-link>
+
+            </div>
+
+            <div v-if="campagneStore.campagneActive.formulaire" class="row g-4">
+
+              <div class="col-md-6">
+
+                <div class="info-label">
+                  Titre
+                </div>
+
+                <div class="info-value">
+                  {{ campagneStore.campagneActive.formulaire.titre || 'Sans titre' }}
+                </div>
+
+              </div>
+
+              <div class="col-md-6">
+
+                <div class="info-label">
+                  Statut
+                </div>
+
+                <div class="info-value d-flex align-items-center gap-2">
+
+                  <span class="badge rounded-pill" :class="campagneStore.campagneActive.formulaire.publier ? 'bg-success' : 'bg-warning'">
+                    {{ campagneStore.campagneActive.formulaire.publier ? 'Publié' : 'Brouillon' }}
+                  </span>
+
+                  <span v-if="!campagneStore.campagneActive.formulaire.actif" class="badge rounded-pill bg-secondary">
+                    Désactivé
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            <div v-else class="text-center py-4">
+
+              <i class="bi bi-file-earmark-text fs-1 text-muted d-block mb-3"></i>
+
+              <p class="text-muted mb-0">
+                Aucun formulaire n'a encore été créé pour cette campagne.
+              </p>
+
             </div>
 
           </div>

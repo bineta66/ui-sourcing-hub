@@ -13,6 +13,7 @@ import CreateCampagne from '../views/campagnes/CreateCampagne.vue'
 import UpdateCampagne from '../views/campagnes/UpdateCampagne.vue'
 import DetailCampagne from '../views/campagnes/DetailCampagne.vue'
 import FormBuilderView from '../views/admin/FormBuilderView.vue'
+import ScannerPresenceRI from '../views/admin/ScannerPresenceRI.vue'
 import Candidature from '../views/Candidature.vue'
 import CandidateEntretiens from '../views/candidate/CandidateEntretiens.vue'
 import CandidateTests from '../views/candidate/CandidateTests.vue'
@@ -64,9 +65,14 @@ const router = createRouter({
       component: ResetPasswordConfirm,
       meta: { guestOnly: true },
     },
-    // Formulaire de candidature public
+    // Formulaire de candidature public (Accessible publiquement sans connexion ni JWT)
     {
-      path: '/candidature/:slug',
+      path: '/formulaire/:id',
+      name: 'formulaire-public',
+      component: Candidature,
+    },
+    {
+      path: '/candidature/:id',
       name: 'candidature',
       component: Candidature,
     },
@@ -109,13 +115,19 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true, roles: ['ADMIN'] },
     },
     {
+      path: '/campagnes/:id',
+      name: 'campagne-detail',
+      component: DetailCampagne,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
+    },
+    {
       path: '/campagnes/detail/:id?',
       name: 'detail-campagne',
       component: DetailCampagne,
       meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
     },
     {
-      path: '/form-builder/:campaignId?',
+      path: '/form-builder/:campaignId?/:formulaireId?',
       name: 'campaign-form-builder',
       component: FormBuilderView,
       meta: { requiresAuth: true, requiresAdmin: true, roles: ['ADMIN'] },
@@ -132,6 +144,23 @@ const router = createRouter({
       name: 'planifier-entretien',
       component: PlanifierEntretien,
       meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
+    },
+    // Scanner Présences RI (Admin)
+    {
+      path: '/reunions/:reunionId/scanner',
+      name: 'scanner-presence-ri-reunion',
+      component: ScannerPresenceRI,
+      meta: { requiresAuth: true, requiresAdmin: true, roles: ['ADMIN'] },
+    },
+    {
+      path: '/admin/presences-ri/:campagneId?',
+      name: 'scanner-presence-ri',
+      component: ScannerPresenceRI,
+      meta: { requiresAuth: true, requiresAdmin: true, roles: ['ADMIN'] },
+    },
+    {
+      path: '/scanner-presence-ri',
+      redirect: '/admin/presences-ri',
     },
     // Espace Candidat
     {

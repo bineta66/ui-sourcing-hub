@@ -59,66 +59,31 @@
 
         <div class="content-grid">
           <div class="main-column">
+            <!-- Liste dynamique des entretiens à venir -->
             <div v-if="activeTab === 'upcoming'" class="interviews-list">
-              <div class="interview-card">
-                <div class="card-left">
-                  <div class="interview-icon-circle" style="background: #FDF2F8; color: #D20C4F;">
-                    <i class="fa-solid fa-laptop fs-4"></i>
-                  </div>
-                  <div class="interview-details">
-                    <h3 class="interview-title">Entretien technique</h3>
-                    <p class="interview-description">Évaluation de vos compétences techniques en développement.</p>
-                    <div class="interview-meta">
-                      <span class="meta-item">
-                        <i class="fa-regular fa-comment-dots me-1"></i>
-                        Entretien présentiel
-                      </span>
-                     
-                    </div>
-                  </div>
-                </div>
-
-                <div class="card-divider"></div>
-
-                <div class="card-right">
-                  <div class="interview-schedule">
-                    <div class="schedule-item">
-                      <i class="fa-regular fa-calendar me-2 text-muted"></i>
-                      <span>22 août 2026</span>
-                    </div>
-                    <div class="schedule-item">
-                      <i class="fa-regular fa-clock me-2 text-muted"></i>
-                      <span>09:00 - 09:45</span>
-                    </div>
-                    <div class="schedule-item">
-                      <i class="fa-solid fa-hourglass-half me-2 text-muted"></i>
-                      <span>Durée : 45 min</span>
-                    </div>
-                  </div>
-                  <div class="card-footer">
-                    <span class="status-badge upcoming">À venir</span>
-                    <button class="btn btn-outline-primary btn-sm">
-                      <i class="fa-regular fa-eye me-1"></i>
-                      Voir la convocation
-                    </button>
-                  </div>
-                </div>
+              <div v-if="upcomingConvocations.length === 0" class="card p-4 text-center text-muted border-0 shadow-sm rounded-4 mb-3">
+                <i class="fa-regular fa-calendar-check fs-2 text-primary mb-2"></i>
+                <h5 class="fw-bold text-dark-blue">Aucun entretien planifié pour le moment</h5>
+                <p class="mb-0 fs-7">Vos prochaines convocations aux entretiens apparaîtront ici dès leur programmation par l'équipe pédagogique.</p>
               </div>
 
-              <div class="interview-card">
+              <div
+                v-for="conv in upcomingConvocations"
+                :key="conv.id"
+                class="interview-card mb-3"
+              >
                 <div class="card-left">
-                  <div class="interview-icon-circle" style="background: #FFF7ED; color: #F59E0B;">
-                    <i class="fa-solid fa-comments fs-4"></i>
+                  <div class="interview-icon-circle" :style="conv.type === 'TECHNIQUE' ? 'background: #FDF2F8; color: #D20C4F;' : 'background: #FFF7ED; color: #F59E0B;'">
+                    <i :class="conv.type === 'TECHNIQUE' ? 'fa-solid fa-laptop fs-4' : 'fa-solid fa-comments fs-4'"></i>
                   </div>
                   <div class="interview-details">
-                    <h3 class="interview-title">Entretien motivationnel</h3>
-                    <p class="interview-description">Évaluation de votre motivation, soft skills et projet professionnel.</p>
+                    <h3 class="interview-title">{{ formatTypeTitle(conv.type) }}</h3>
+                    <p class="interview-description">{{ formatTypeDescription(conv.type) }}</p>
                     <div class="interview-meta">
                       <span class="meta-item">
-                        <i class="fa-regular fa-comment-dots me-1"></i>
-                        Entretien présentiel
+                        <i class="fa-solid fa-location-dot me-1"></i>
+                        {{ conv.lieu }}
                       </span>
-                      
                     </div>
                   </div>
                 </div>
@@ -129,20 +94,16 @@
                   <div class="interview-schedule">
                     <div class="schedule-item">
                       <i class="fa-regular fa-calendar me-2 text-muted"></i>
-                      <span>22 août 2026</span>
+                      <span>{{ formatDate(conv.date) }}</span>
                     </div>
                     <div class="schedule-item">
                       <i class="fa-regular fa-clock me-2 text-muted"></i>
-                      <span>10:00 - 10:30</span>
-                    </div>
-                    <div class="schedule-item">
-                      <i class="fa-solid fa-hourglass-half me-2 text-muted"></i>
-                      <span>Durée : 30 min</span>
+                      <span>{{ conv.heure_debut?.substring(0, 5) }} {{ conv.heure_fin ? '- ' + conv.heure_fin.substring(0, 5) : '' }}</span>
                     </div>
                   </div>
                   <div class="card-footer">
                     <span class="status-badge upcoming">À venir</span>
-                    <button class="btn btn-outline-primary btn-sm">
+                    <button class="btn btn-outline-primary btn-sm" @click="openConvocation(conv)">
                       <i class="fa-regular fa-eye me-1"></i>
                       Voir la convocation
                     </button>
@@ -153,27 +114,29 @@
 
             <div v-if="activeTab === 'past'" class="interviews-list">
               <div class="section-title mb-3">Entretiens passés</div>
-
-              <div class="interview-card past">
+              <div v-if="pastConvocations.length === 0" class="text-muted text-center py-4">
+                Aucun entretien passé.
+              </div>
+              <div
+                v-for="conv in pastConvocations"
+                :key="conv.id"
+                class="interview-card past mb-3"
+              >
                 <div class="card-left">
                   <div class="interview-icon-circle" style="background: #DCFCE7; color: #16A34A;">
                     <i class="fa-solid fa-check fs-4"></i>
                   </div>
                   <div class="interview-details">
-                    <h3 class="interview-title">Entretien de présélection</h3>
-                    <p class="interview-description">Premier échange pour évaluer votre profil et votre motivation.</p>
+                    <h3 class="interview-title">{{ formatTypeTitle(conv.type) }}</h3>
+                    <p class="interview-description">{{ formatTypeDescription(conv.type) }}</p>
                     <div class="interview-meta">
                       <span class="meta-item">
                         <i class="fa-regular fa-calendar me-1"></i>
-                        15 août 2026
+                        {{ formatDate(conv.date) }}
                       </span>
                       <span class="meta-item">
                         <i class="fa-regular fa-clock me-1"></i>
-                        11:00 - 11:30
-                      </span>
-                      <span class="meta-item">
-                        <i class="fa-solid fa-hourglass-half me-1"></i>
-                        Durée : 30 min
+                        {{ conv.heure_debut?.substring(0, 5) }}
                       </span>
                     </div>
                   </div>
@@ -183,11 +146,7 @@
 
                 <div class="card-right">
                   <div class="card-footer">
-                    <span class="status-badge upcoming">À venir</span>
-                    <button class="btn btn-submit btn-sm" @click="openConvocation('Entretien motivationnel')">
-                      <i class="fa-regular fa-eye me-1"></i>
-                      Voir la convocation
-                    </button>
+                    <span class="status-badge passed">Effectué</span>
                   </div>
                 </div>
               </div>
@@ -203,56 +162,22 @@
                 <h4 class="info-card-title mb-0">Informations importantes</h4>
               </div>
               <ul class="info-list">
-                <li>Connectez-vous <strong>10 minutes avant chaque entretien.</strong></li>
+                <li>Soyez présent(e) <strong>10 minutes avant chaque entretien.</strong></li>
                 <li>Assurez-vous d'être dans un endroit calme.</li>
                 <li>Ayez une pièce d'identité à portée de main.</li>
-                <li><strong>Bonne chance ! </strong></li>
+                <li><strong>Bonne chance pour vos entretiens !</strong></li>
               </ul>
-            </div>
-
-            <div class="summary-card">
-              <h4 class="summary-title mb-3">Résumé de vos entretiens</h4>
-              <div class="progress-chart">
-                <div class="circular-progress">
-                  <svg viewBox="0 0 36 36" class="circular-chart">
-                    <path class="circle-bg"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                    <path class="circle"
-                      stroke-dasharray="33, 100"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    />
-                  </svg>
-                  <div class="progress-text">
-                    <span class="progress-number">1/3</span>
-                  
-                  </div>
-                </div>
-                <div class="progress-legend">
-                  <div class="legend-item">
-                    <span class="legend-dot upcoming"></span>
-                    <span>À venir — 2</span>
-                  </div>
-                  <div class="legend-item">
-                    <span class="legend-dot passed"></span>
-                    <span>Passés — 1</span>
-                  </div>
-                  <div class="legend-item">
-                    <span class="legend-dot remaining"></span>
-                    <span>Restants — 0</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div v-if="showConvocationModal" class="modal-overlay" @click.self="closeConvocation">
+    <!-- Modal Convocation Entretien (Sans QR Code car après la RI) -->
+    <div v-if="showConvocationModal && selectedConvocationObj" class="modal-overlay" @click.self="closeConvocation">
       <div class="modal-card">
         <div class="modal-header">
-          <h3 class="modal-title">Convocation - {{ selectedConvocation }}</h3>
+          <h3 class="modal-title">{{ formatTypeTitle(selectedConvocationObj.type) }}</h3>
           <button class="modal-close" @click="closeConvocation">
             <i class="fa-solid fa-xmark"></i>
           </button>
@@ -260,32 +185,24 @@
         <div class="modal-body">
           <div class="convocation-detail">
             <div class="convocation-row">
-              <span class="convocation-label">Type d'entretien</span>
-              <span class="convocation-value">{{ selectedConvocation }}</span>
+              <span class="convocation-label">Campagne</span>
+              <span class="convocation-value">{{ selectedConvocationObj.campagne_titre }}</span>
             </div>
             <div class="convocation-row">
               <span class="convocation-label">Date</span>
-              <span class="convocation-value">22 août 2026</span>
+              <span class="convocation-value">{{ formatDate(selectedConvocationObj.date) }}</span>
             </div>
             <div class="convocation-row">
               <span class="convocation-label">Heure</span>
-              <span class="convocation-value">09:00 - 09:45</span>
+              <span class="convocation-value">{{ selectedConvocationObj.heure_debut?.substring(0, 5) }} {{ selectedConvocationObj.heure_fin ? '- ' + selectedConvocationObj.heure_fin.substring(0, 5) : '' }}</span>
             </div>
             <div class="convocation-row">
-              <span class="convocation-label">Durée</span>
-              <span class="convocation-value">45 min</span>
+              <span class="convocation-label">Lieu</span>
+              <span class="convocation-value">{{ selectedConvocationObj.lieu }}</span>
             </div>
             <div class="convocation-row">
-              <span class="convocation-label">Format</span>
-              <span class="convocation-value">Entretien en ligne</span>
-            </div>
-            <div class="convocation-row">
-              <span class="convocation-label">Jury</span>
-              <span class="convocation-value">2 membres</span>
-            </div>
-            <div class="convocation-row">
-              <span class="convocation-label">Lien de connexion</span>
-              <a href="#" class="convocation-link">https://meet.sourcinghub.example.com/entretien-1</a>
+              <span class="convocation-label">Statut</span>
+              <span class="badge bg-primary-subtle text-primary">{{ selectedConvocationObj.statut }}</span>
             </div>
           </div>
         </div>
@@ -298,26 +215,79 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import CandidateSidebar from '@/components/CandidateSidebar.vue'
+import { getMesConvocations } from '@/api/endpoints/convocations'
+import { useAuthStore } from '@/stores/auth'
 
+const authStore = useAuthStore()
 const currentView = ref('entretiens')
 const activeTab = ref('upcoming')
 const showConvocationModal = ref(false)
-const selectedConvocation = ref('')
+const selectedConvocationObj = ref(null)
+const convocations = ref([])
+const loading = ref(false)
 
-const handleLogout = () => {
-  console.log("Déconnexion de l'utilisateur")
+const handleLogout = async () => {
+  await authStore.logout()
+  window.location.href = '/login'
 }
 
-const openConvocation = (title) => {
-  selectedConvocation.value = title
+const upcomingConvocations = computed(() => {
+  return convocations.value.filter((c) => c.statut === 'en_attente' || c.statut === 'a_venir')
+})
+
+const pastConvocations = computed(() => {
+  return convocations.value.filter((c) => c.statut === 'present' || c.statut === 'termine')
+})
+
+const openConvocation = (conv) => {
+  selectedConvocationObj.value = conv
   showConvocationModal.value = true
 }
 
 const closeConvocation = () => {
   showConvocationModal.value = false
 }
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
+const formatTypeTitle = (type) => {
+  switch (type) {
+    case 'TECHNIQUE': return 'Entretien technique'
+    case 'MOTIVATION': return 'Entretien motivationnel'
+    case 'FINAL': return 'Entretien final'
+    default: return type
+  }
+}
+
+const formatTypeDescription = (type) => {
+  switch (type) {
+    case 'TECHNIQUE': return 'Évaluation approfondie de vos compétences techniques et pratiques.'
+    case 'MOTIVATION': return 'Évaluation de votre motivation, projet professionnel et adéquation culturelle.'
+    case 'FINAL': return 'Dernier entretien de débriefing et validation avec le jury final.'
+    default: return 'Entretien dans le cadre de votre parcours de recrutement.'
+  }
+}
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const { data } = await getMesConvocations()
+    convocations.value = data
+  } catch (err) {
+    console.error('Erreur chargement convocations:', err)
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <style scoped>

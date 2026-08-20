@@ -16,6 +16,7 @@
       <option value="number">Nombre</option>
       <option value="email">E-mail</option>
       <option value="tel">Téléphone</option>
+      <option value="yes_no">Oui / Non</option>
     </select>
   </div>
 </template>

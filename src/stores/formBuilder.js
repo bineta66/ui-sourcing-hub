@@ -1,5 +1,21 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import {
+  getFormulaireById,
+  createFormulaire,
+  updateFormulaire,
+  publierFormulaire,
+  depublierFormulaire,
+  createSection,
+  updateSection as apiUpdateSection,
+  deleteSection as apiDeleteSection,
+  createQuestion,
+  updateQuestion as apiUpdateQuestion,
+  deleteQuestion as apiDeleteQuestion,
+  createOption,
+  updateOption as apiUpdateOption,
+  deleteOption as apiDeleteOption,
+} from '@/api/endpoints/formulaires'
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 
@@ -11,6 +27,58 @@ const slugify = (value) => {
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
+}
+
+const mapBackendToLocal = (data) => {
+  const sections = (data.sections || []).map(section => ({
+    id: String(section.id),
+    title: section.titre,
+    questions: (section.questions || []).map(q => {
+      const typeMap = {TEXT: 'text', TEXTAREA: 'textarea', RADIO: 'radio', CHECKBOX: 'checkbox', SELECT: 'select', NUMBER: 'number', EMAIL: 'email', DATE: 'date', YES_NO: 'yes_no'}
+      return {
+        id: String(q.id),
+        label: q.texte,
+        type: typeMap[q.type_question] || 'text',
+        required: q.obligatoire,
+        options: (q.options || []).map(o => typeof o === 'string' ? o : (o.texte || o.valeur || String(o))),
+      }
+    }),
+  }))
+  return {
+    formTitle: data.titre || '',
+    formDescription: data.description || '',
+    campaignId: data.campagne,
+    campaignName: data.campagne_title || '',
+    sections,
+    savedDraft: true,
+    isPublished: data.publier,
+  }
+}
+
+const mapLocalToBackend = (state) => {
+  const TYPE_MAP = {text: 'TEXT', textarea: 'TEXTAREA', radio: 'RADIO', checkbox: 'CHECKBOX', select: 'SELECT', number: 'NUMBER', email: 'EMAIL', date: 'DATE', yes_no: 'YES_NO', tel: 'TEXT', time: 'TEXT'}
+  const sections = state.sections.map(section => ({
+    titre: section.title,
+    description: '',
+    ordre: state.sections.indexOf(section),
+    questions: section.questions.map((q, qIdx) => ({
+      texte: q.label,
+      type_question: TYPE_MAP[q.type] || 'TEXT',
+      obligatoire: q.required,
+      ordre: qIdx,
+      options: (q.options || []).map((o, oIdx) => ({
+        texte: typeof o === 'string' ? o : (o.text || o),
+        valeur: typeof o === 'string' ? o : (o.value || o),
+        ordre: oIdx,
+      })),
+    })),
+  }))
+  return {
+    titre: state.formTitle,
+    description: state.formDescription,
+    campagne: state.campaignId,
+    sections,
+  }
 }
 
 const defaultSections = [
@@ -71,6 +139,9 @@ export const useFormBuilderStore = defineStore('formBuilder', () => {
   const savedDraft = ref(false)
   const isPublished = ref(false)
   const selectedQuestionId = ref(null)
+  const loading = ref(false)
+  const error = ref(null)
+  const currentFormulaireId = ref(null)
 
   const totalQuestions = computed(() => sections.value.reduce((sum, section) => sum + section.questions.length, 0))
   const totalSections = computed(() => sections.value.length)
@@ -100,6 +171,85 @@ export const useFormBuilderStore = defineStore('formBuilder', () => {
     savedDraft.value = false
     isPublished.value = false
     selectedQuestionId.value = null
+    currentFormulaireId.value = null
+  }
+
+  const loadFromBackend = async (id) => {
+    loading.value = true
+    error.value = null
+    try {
+      const { data } = await getFormulaireById(id)
+      const mapped = mapBackendToLocal(data)
+      formTitle.value = mapped.formTitle
+      formDescription.value = mapped.formDescription
+      campaignId.value = mapped.campaignId
+      campaignName.value = mapped.campaignName
+      sections.value = mapped.sections
+      savedDraft.value = mapped.savedDraft
+      isPublished.value = mapped.isPublished
+      currentFormulaireId.value = id
+      selectedQuestionId.value = null
+    } catch (err) {
+      error.value = err
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const saveToBackend = async () => {
+    loading.value = true
+    error.value = null
+    try {
+      const payload = mapLocalToBackend({
+        formTitle: formTitle.value,
+        formDescription: formDescription.value,
+        campaignId: campaignId.value,
+        sections: sections.value,
+      })
+      if (currentFormulaireId.value) {
+        const { data } = await updateFormulaire(currentFormulaireId.value, payload)
+        const mapped = mapBackendToLocal(data)
+        formTitle.value = mapped.formTitle
+        formDescription.value = mapped.formDescription
+        sections.value = mapped.sections
+        savedDraft.value = true
+        return data
+      } else {
+        const { data } = await createFormulaire(payload)
+        const mapped = mapBackendToLocal(data)
+        currentFormulaireId.value = mapped.id || data.id
+        formTitle.value = mapped.formTitle
+        formDescription.value = mapped.formDescription
+        sections.value = mapped.sections
+        savedDraft.value = true
+        return data
+      }
+    } catch (err) {
+      error.value = err
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const publishToBackend = async () => {
+    if (!currentFormulaireId.value) {
+      const saved = await saveToBackend()
+      currentFormulaireId.value = saved.id
+    }
+    loading.value = true
+    error.value = null
+    try {
+      const { data } = await publierFormulaire(currentFormulaireId.value)
+      isPublished.value = data.publier
+      return data
+    } catch (err) {
+      error.value = err
+      throw err
+    } finally {
+      loading.value = false
+    }
   }
 
   const addSection = (title = 'Nouvelle section') => {
@@ -234,55 +384,11 @@ export const useFormBuilderStore = defineStore('formBuilder', () => {
     savedDraft.value = false
     isPublished.value = false
     selectedQuestionId.value = null
+    currentFormulaireId.value = null
   }
 
   const saveDraft = () => {
     savedDraft.value = true
-  }
-
-  const publishForm = (slug) => {
-    if (!slug || !campaignId.value) return
-    isPublished.value = true
-    try {
-      const questions = []
-      sections.value.forEach(section => {
-        section.questions.forEach(q => {
-          questions.push({
-            id: q.id,
-            type: q.type,
-            label: q.label,
-            required: q.required,
-            options: q.options || []
-          })
-        })
-      })
-
-      const payload = {
-        id: slug,
-        title: formTitle.value,
-        description: formDescription.value,
-        campaignId: campaignId.value,
-        campaignName: campaignName.value,
-        published: true,
-        publishedAt: new Date().toISOString(),
-        questions
-      }
-
-      localStorage.setItem(`public_form_${slug}`, JSON.stringify(payload))
-    } catch (e) {
-      console.error('Failed to publish form', e)
-    }
-  }
-
-  const getPublishedFormBySlug = (slug) => {
-    try {
-      const raw = localStorage.getItem(`public_form_${slug}`)
-      if (!raw) return null
-      return JSON.parse(raw)
-    } catch (e) {
-      console.error('Failed to get published form', e)
-      return null
-    }
   }
 
   return {
@@ -297,8 +403,14 @@ export const useFormBuilderStore = defineStore('formBuilder', () => {
     selectedQuestion,
     totalQuestions,
     totalSections,
+    loading,
+    error,
+    currentFormulaireId,
     updateMeta,
     initForCampaign,
+    loadFromBackend,
+    saveToBackend,
+    publishToBackend,
     addSection,
     updateSection,
     deleteSection,
@@ -314,7 +426,5 @@ export const useFormBuilderStore = defineStore('formBuilder', () => {
     deleteOption,
     resetForm,
     saveDraft,
-    publishForm,
-    getPublishedFormBySlug
   }
 })

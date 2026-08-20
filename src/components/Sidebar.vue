@@ -22,6 +22,7 @@ const handleLogout = async () => {
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', to: '/campagnes' },
+  { id: 'presences-ri', label: 'Présences RI', icon: 'fa-solid fa-qrcode', to: '/admin/presences-ri' },
   { id: 'entretien', label: 'Entretien', icon: 'fa-regular fa-calendar-check', to: '/entretiens' },
   { id: 'candidates', label: 'Candidates', icon: 'fa-solid fa-user-group', to: '/gestion-utilisateurs' },
   { id: 'campagnes', label: 'Campagnes', icon: 'fa-solid fa-file-lines', to: '/campagnes' },
@@ -79,6 +80,9 @@ const navItems = [
 <style scoped>
 .sidebar {
   width: 256px;
+  min-width: 256px;
+  max-width: 256px;
+  flex-shrink: 0;
   height: 100vh;
   background-color: #00313C;
   flex-shrink: 0;
@@ -88,6 +92,7 @@ const navItems = [
   overflow-y: auto;
   z-index: 30;
   font-family: 'Nunito Sans', sans-serif;
+  box-sizing: border-box;
 }
 
 .brand-logo {

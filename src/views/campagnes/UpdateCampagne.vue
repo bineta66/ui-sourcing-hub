@@ -13,7 +13,7 @@ const campagnesStore = useCampagnesStore()
 const criteresStore = useCriteresStore()
 const referentielsStore = useReferentielsStore()
 
-const campagneId = route.params.id
+const campagneId = Number(route.params.id)
 const currentView = ref('campagnes')
 
 const form = ref({
@@ -34,23 +34,29 @@ const submitError = ref(null)
 const isLoading = ref(true)
 
 const preremplirFormulaire = (campagne) => {
-  form.value.title = campagne.title
-  form.value.description = campagne.description
-  form.value.begin_date = campagne.begin_date
-  form.value.end_date = campagne.end_date
-  form.value.status = campagne.status
-  form.value.referentiel_id = campagne.referentiel?.id ?? null
-  form.value.criteres_ids = (campagne.criteres || []).map((c) => c.id)
+  form.value.title = campagne.title ?? ''
+  form.value.description = campagne.description ?? ''
+  form.value.begin_date = campagne.begin_date?.slice(0, 10) ?? ''
+  form.value.end_date = campagne.end_date?.slice(0, 10) ?? ''
+  form.value.status = campagne.status ?? 'brouillon'
+  form.value.referentiel_id = campagne.referentiel?.id ?? campagne.referentiel_id ?? null
+  form.value.criteres_ids = (campagne.criteres || []).map((c) => c.id ?? c)
 }
 
 onMounted(async () => {
-  await Promise.all([
-    campagnesStore.fetchCampagneById(campagneId),
-    criteresStore.fetchCriteres(),
-    referentielsStore.fetchReferentiels()
-  ])
+  try {
+    await Promise.all([
+      campagnesStore.fetchCampagneById(campagneId),
+      criteresStore.fetchCriteres(),
+      referentielsStore.fetchReferentiels()
+    ])
+  } catch {
+    submitError.value = 'Erreur lors du chargement de la campagne.'
+  }
 
-  if (campagnesStore.campagneActive) {
+  if (campagnesStore.error) {
+    submitError.value = 'Erreur lors du chargement de la campagne.'
+  } else if (campagnesStore.campagneActive) {
     preremplirFormulaire(campagnesStore.campagneActive)
   }
 
@@ -104,7 +110,20 @@ const modifierProjet = async () => {
     window.history.back()
   } catch (err) {
     console.error('Erreur lors de la modification de la campagne :', err.response?.data)
-    submitError.value = 'Une erreur est survenue lors de la modification.'
+    if (err.response?.status === 400 && err.response?.data) {
+      const messages = Object.entries(err.response.data)
+        .map(([key, value]) => {
+          if (Array.isArray(value)) return `${key}: ${value.join(', ')}`
+          if (value && typeof value === 'object') return `${key}: ${JSON.stringify(value)}`
+          return `${key}: ${value}`
+        })
+        .join(' | ')
+      submitError.value = messages || 'Une erreur est survenue lors de la modification.'
+    } else if (err.response?.data?.detail) {
+      submitError.value = err.response.data.detail
+    } else {
+      submitError.value = 'Une erreur est survenue lors de la modification.'
+    }
   } finally {
     isSubmitting.value = false
   }

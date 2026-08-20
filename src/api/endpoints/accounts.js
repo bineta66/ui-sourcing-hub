@@ -34,6 +34,14 @@ export const refreshTokenApi = (refreshToken) => api.post('api/accounts/token/re
  */
 export const inviteUserApi = (data) => api.post('api/accounts/users/', data)
 
+export const listUsersApi = () => api.get('api/accounts/users/')
+
+export const getUserByIdApi = (userId) => api.get(`api/accounts/users/${userId}/`)
+
+export const updateUserApi = (userId, data) => api.patch(`api/accounts/users/${userId}/`, data)
+
+export const deleteUserApi = (userId) => api.delete(`api/accounts/users/${userId}/`)
+
 /**
  * Gestion de compte : Activation de compte via token d'invitation
  * @param {Object} data - { token, password, password_confirm }

@@ -27,215 +27,243 @@
       </header>
 
       <div class="content">
-        <div class="page-header">
-          <div>
-            <h1 class="page-title">Détail utilisateur</h1>
-            <p class="page-subtitle">Consultez les informations et l'activité de ce membre de l'équipe.</p>
-          </div>
-          <div class="page-actions">
-            <router-link :to="{ path: '/creation-utilisateur', query: { id: user.id } }" class="btn-secondary" style="text-decoration:none;">
-              <i class="bi bi-pencil-square"></i>
-              Modifier
-            </router-link>
-            <router-link :to="{ path: '/creation-utilisateur', query: { id: user.id } }" class="btn-primary" style="text-decoration:none;">
-              <i class="bi bi-person-plus"></i>
-              Ajouter un membre
-            </router-link>
-          </div>
+        <!-- Error alert -->
+        <div v-if="errorMessage" class="alert alert-danger d-flex align-items-center py-2 px-3 mb-3" style="font-size: 13px; border-radius: 8px;">
+          <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+          <div>{{ errorMessage }}</div>
         </div>
 
-        <div class="profile-card">
-          <div class="profile-header">
-            <div class="profile-avatar">
-              <img :src="user.avatar" :alt="user.name" />
-            </div>
-            <div class="profile-main">
-              <div class="profile-name">{{ user.name }}</div>
-              <div class="profile-subtitle">{{ user.subtitle }}</div>
-              <div class="profile-meta">
-                <span class="profile-divider">•</span>
-                <span class="profile-status">
-                  <span class="status-dot"></span>
-                  {{ user.status }}
-                </span>
-              </div>
-            </div>
-            <div class="profile-badges">
-              <span class="badge role" :class="user.roleClass">{{ user.role }}</span>
-            </div>
+        <!-- Loading -->
+        <div v-else-if="isLoading" class="text-center py-5">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Chargement...</span>
           </div>
-
-          <div class="profile-grid">
-            <div class="profile-section">
-              <h3 class="section-title">Informations personnelles</h3>
-              <div class="info-list">
-                <div class="info-item">
-                  <span class="info-label">Nom complet</span>
-                  <span class="info-value">{{ user.name }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">Adresse email</span>
-                  <span class="info-value">{{ user.email }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">Téléphone</span>
-                  <span class="info-value">{{ user.phone }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">Référentiel</span>
-                  <span class="info-value">{{ user.referentiel }}</span>
-                </div>
-                <div class="info-item">
-                  <span class="info-label">Rôle</span>
-                  <span class="info-value">{{ user.subtitle }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="profile-section">
-              <h3 class="section-title">Activité récente</h3>
-              <div class="activity-list">
-                <div class="activity-item">
-                  <div class="activity-icon">
-                    <i class="bi bi-browser-chrome"></i>
-                  </div>
-                  <div class="activity-text">
-                    <div class="activity-main">Connexion via Chrome</div>
-                    <div class="activity-time">{{ user.activity }}</div>
-                  </div>
-                </div>
-                <div class="activity-item">
-                  <div class="activity-icon">
-                    <i class="bi bi-file-earmark-text"></i>
-                  </div>
-                  <div class="activity-text">
-                    <div class="activity-main">Mise à jour du profil</div>
-                    <div class="activity-time">1 hour ago</div>
-                  </div>
-                </div>
-                <div class="activity-item">
-                  <div class="activity-icon">
-                    <i class="bi bi-people"></i>
-                  </div>
-                  <div class="activity-text">
-                    <div class="activity-main">Ajouté à l'équipe</div>
-                    <div class="activity-time">3 days ago</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <p class="text-muted mt-2 mb-0" style="font-size: 13px">Chargement du profil utilisateur...</p>
         </div>
 
-     
+        <!-- Content -->
+        <template v-else-if="user">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Détail utilisateur</h1>
+              <p class="page-subtitle">Consultez les informations et l'activité de ce membre de l'équipe.</p>
+            </div>
+            <div class="page-actions">
+              <router-link :to="{ path: '/creation-utilisateur', query: { id: user.id } }" class="btn-secondary" style="text-decoration:none;">
+                <i class="bi bi-pencil-square"></i>
+                Modifier
+              </router-link>
+              <router-link to="/creation-utilisateur" class="btn-primary" style="text-decoration:none;">
+                <i class="bi bi-person-plus"></i>
+                Ajouter un membre
+              </router-link>
+            </div>
+          </div>
 
+          <div class="profile-card">
+            <div class="profile-header">
+              <div class="profile-avatar">
+                <img :src="`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=00313C&color=fff&size=80`" :alt="user.name" />
+              </div>
+              <div class="profile-main">
+                <div class="profile-name">{{ user.name }}</div>
+                <div class="profile-subtitle">{{ roleLabel(user.role) }}</div>
+                <div class="profile-meta">
+                  <span class="profile-divider">•</span>
+                  <span class="profile-status">
+                    <span class="status-dot" :class="user.is_active ? 'bg-success' : 'bg-secondary'"></span>
+                    {{ user.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+              </div>
+              <div class="profile-badges">
+                <span class="badge role" :class="roleBadgeClass(user.role)">{{ roleLabel(user.role) }}</span>
+              </div>
+            </div>
+
+            <div class="profile-grid">
+              <div class="profile-section">
+                <h3 class="section-title">Informations personnelles</h3>
+                <div class="info-list">
+                  <div class="info-item">
+                    <span class="info-label">Nom complet</span>
+                    <span class="info-value">{{ user.name }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Adresse email</span>
+                    <span class="info-value">{{ user.email }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Téléphone</span>
+                    <span class="info-value">{{ user.phone || '—' }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Référentiel</span>
+                    <span class="info-value">{{ user.referentiel || '—' }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Rôle</span>
+                    <span class="info-value">{{ roleLabel(user.role) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="profile-section">
+                <h3 class="section-title">Activité récente</h3>
+                <div class="activity-list">
+                  <div class="activity-item">
+                    <div class="activity-icon">
+                      <i class="bi bi-browser-chrome"></i>
+                    </div>
+                    <div class="activity-text">
+                      <div class="activity-main">Connexion via Chrome</div>
+                      <div class="activity-time">{{ user.lastLogin || 'Jamais' }}</div>
+                    </div>
+                  </div>
+                  <div class="activity-item">
+                    <div class="activity-icon">
+                      <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <div class="activity-text">
+                      <div class="activity-main">Mise à jour du profil</div>
+                      <div class="activity-time">{{ user.lastLogin || 'Jamais' }}</div>
+                    </div>
+                  </div>
+                  <div class="activity-item">
+                    <div class="activity-icon">
+                      <i class="bi bi-people"></i>
+                    </div>
+                    <div class="activity-text">
+                      <div class="activity-main">Ajouté à l'équipe</div>
+                      <div class="activity-time">{{ user.dateJoined || 'Jamais' }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bottom-cards">
+            <div class="bottom-card primary">
+              <div class="bottom-content">
+                <div class="bottom-icon">
+                  <i class="bi bi-send"></i>
+                </div>
+                <h3 class="bottom-title">Invitation groupée des membres de l'équipe.</h3>
+                <p class="bottom-desc">Invitez plusieurs utilisateurs à la fois à l'aide d'un fichier CSV ou d'une invitation directe d'une liste.</p>
+                <button class="btn-white">Lancer l'invitation groupée</button>
+              </div>
+              <div class="bottom-bg">
+                <i class="bi bi-people-fill"></i>
+              </div>
+            </div>
+
+            <div class="bottom-card secondary">
+              <div class="bottom-icon">
+                <i class="bi bi-shield-check"></i>
+              </div>
+              <h3 class="bottom-title">Permissions et rôles</h3>
+              <p class="bottom-desc">Définissez des niveaux d'accès personnalisés pour contrôler précisément les permissions système.</p>
+              <button class="btn-dark">Configurer les permissions</button>
+            </div>
+          </div>
+        </template>
+
+        <div v-else class="text-center py-5">
+          <span class="text-muted" style="font-size: 13px;">Utilisateur introuvable.</span>
+        </div>
       </div>
     </main>
   </div>
 </template>
 
 <script setup>
-import Sidebar from '@/components/Sidebar.vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import Sidebar from '@/components/Sidebar.vue'
 import { useAuthStore } from '@/stores/auth'
+import { getUserById } from '@/services/userService'
 
 const route = useRoute()
 const authStore = useAuthStore()
 
-const users = [
-  {
-    id: 1,
-    name: 'David Richardson',
-    subtitle: 'Head of Sourcing',
-    email: 'd.richardson@recruit.ai',
-    role: 'admin',
-    roleClass: 'role-admin',
-    status: 'ACTIVE',
-    statusClass: 'status-active',
-    activity: '2 mins ago',
-    browser: 'Dernière Chrome',
-    phone: '+221 77 000 00 00',
-    referentiel: 'Talent Acquisition',
-    avatar: 'https://ui-avatars.com/api/?name=David+Richardson&background=00313C&color=fff&size=80',
-    actionClass: '',
-    actionTitle: 'Désactiver',
-    actionIcon: 'bi bi-power'
-  },
-  {
-    id: 2,
-    name: 'Eleanor Rigby',
-    subtitle: 'Recruitment Coach',
-    email: 'eleanor.r@recruit.ai',
-    role: 'jury',
-    roleClass: 'role-jury',
-    status: 'ACTIVE',
-    statusClass: 'status-active',
-    activity: '1 hour ago',
-    browser: 'Mobile Safari',
-    phone: '+221 77 000 00 01',
-    referentiel: 'Talent Acquisition',
-    avatar: 'https://ui-avatars.com/api/?name=Eleanor+Rigby&background=6B7280&color=fff&size=80',
-    actionClass: '',
-    actionTitle: 'Désactiver',
-    actionIcon: 'bi bi-power'
-  },
-  {
-    id: 3,
-    name: 'Marcus Aurelius',
-    subtitle: 'Compliance Expert',
-    email: 'marcus.a@recruit.ai',
-    role: 'candidate',
-    roleClass: 'role-candidate',
-    status: 'INACTIVE',
-    statusClass: 'status-inactive',
-    activity: '3 days ago',
-    browser: 'Desktop Firefox',
-    phone: '+221 77 000 00 02',
-    referentiel: 'Talent Acquisition',
-    avatar: 'https://ui-avatars.com/api/?name=Marcus+Aurelius&background=F59E0B&color=fff&size=80',
-    actionClass: 'action-rose',
-    actionTitle: 'Activer',
-    actionIcon: 'bi bi-play-fill'
-  },
-  {
-    id: 4,
-    name: 'Elena Martinez',
-    subtitle: 'Talent Sourcing',
-    email: 'elena.m@recruit.ai',
-    role: 'SOURCING',
-    roleClass: 'role-sourcing',
-    status: 'ACTIVE',
-    statusClass: 'status-active',
-    activity: 'Online Now',
-    browser: 'Desktop Chrome',
-    phone: '+221 77 000 00 03',
-    referentiel: 'Talent Acquisition',
-    avatar: 'https://ui-avatars.com/api/?name=Elena+Martinez&background=16A34A&color=fff&size=80',
-    actionClass: '',
-    actionTitle: 'Désactiver',
-    actionIcon: 'bi bi-power'
-  },
-  {
-    id: 5,
-    name: 'Julian Chen',
-    subtitle: 'Recruitment Coach',
-    email: 'j.chen@recruit.ai',
-    role: 'jury',
-    roleClass: 'role-jury',
-    status: 'ACTIVE',
-    statusClass: 'status-active',
-    activity: '10 hours ago',
-    browser: 'Desktop Chrome',
-    phone: '+221 77 000 00 04',
-    referentiel: 'Talent Acquisition',
-    avatar: 'https://ui-avatars.com/api/?name=Julian+Chen&background=64748B&color=fff&size=80',
-    actionClass: '',
-    actionTitle: 'Désactiver',
-    actionIcon: 'bi bi-power'
-  }
-]
+const rawUser = ref(null)
+const isLoading = ref(true)
+const errorMessage = ref('')
 
-const user = users.find(u => u.id === Number(route.params.id)) || users[0]
+const roleLabels = {
+  ADMIN: 'Administrateur',
+  CANDIDAT: 'Candidat',
+  JURY: 'Jury',
+}
+
+const roleBadgeClasses = {
+  ADMIN: 'role-admin',
+  CANDIDAT: 'role-candidate',
+  JURY: 'role-jury',
+}
+
+const roleLabel = (role) => {
+  return roleLabels[role] || role || '—'
+}
+
+const roleBadgeClass = (role) => {
+  return roleBadgeClasses[role] || ''
+}
+
+const user = computed(() => {
+  if (!rawUser.value) return null
+  const fullName =
+    rawUser.value.first_name && rawUser.value.last_name
+      ? `${rawUser.value.first_name} ${rawUser.value.last_name}`.trim()
+      : rawUser.value.first_name ||
+        rawUser.value.last_name ||
+        rawUser.value.email?.split('@')[0] ||
+        'Utilisateur'
+
+  return {
+    id: rawUser.value.id,
+    name: fullName,
+    email: rawUser.value.email || '',
+    role: rawUser.value.role || 'CANDIDAT',
+    is_active: rawUser.value.is_active ?? true,
+    phone: rawUser.value.phone_number || '',
+    referentiel: rawUser.value.referentiel || '',
+    lastLogin: rawUser.value.last_login
+      ? new Date(rawUser.value.last_login).toLocaleDateString('fr-FR')
+      : 'Jamais',
+    dateJoined: rawUser.value.date_joined
+      ? new Date(rawUser.value.date_joined).toLocaleDateString('fr-FR')
+      : '—',
+  }
+})
+
+const userId = Number(route.params.id)
+
+onMounted(async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+  try {
+    const response = await getUserById(userId)
+    rawUser.value = response.data
+  } catch (error) {
+    const status = error.response?.status
+    const detail = error.response?.data?.detail
+    if (status === 401) {
+      errorMessage.value = "Votre session a expiré. Veuillez vous reconnecter."
+    } else if (status === 403) {
+      errorMessage.value = "Vous n'avez pas l'autorisation de consulter cet utilisateur."
+    } else if (status === 404) {
+      errorMessage.value = "Utilisateur introuvable."
+    } else if (status === 500) {
+      errorMessage.value = "Une erreur serveur est survenue."
+    } else {
+      errorMessage.value = detail || "Erreur lors du chargement de l'utilisateur."
+    }
+  } finally {
+    isLoading.value = false
+  }
+})
 </script>
 
 <style scoped>
@@ -243,23 +271,31 @@ const user = users.find(u => u.id === Number(route.params.id)) || users[0]
 
 .layout {
   display: flex;
+  width: 100%;
+  height: 100vh;
   min-height: 100vh;
   font-family: 'Inter', Arial, sans-serif;
   background: #F8FAFC;
+  overflow: hidden;
 }
 
 .main {
- 
   flex: 1;
-  min-height: 100vh;
+  min-width: 0;
+  width: calc(100vw - 256px);
+  max-width: calc(100vw - 256px);
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: #FFFFFF;
+  overflow: hidden;
 }
 
 .header {
   position: sticky;
   top: 0;
   z-index: 50;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -267,6 +303,10 @@ const user = users.find(u => u.id === Number(route.params.id)) || users[0]
   padding: 0 28px;
   background: #FFFFFF;
   border-bottom: 1px solid #EEF2F5;
+  width: 100%;
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .search-box {
@@ -396,16 +436,23 @@ const user = users.find(u => u.id === Number(route.params.id)) || users[0]
 
 .content {
   flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   padding: 28px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
 .page-title {
@@ -531,11 +578,6 @@ const user = users.find(u => u.id === Number(route.params.id)) || users[0]
   margin-top: 4px;
 }
 
-.profile-email {
-  font-size: 13px;
-  color: #64748B;
-}
-
 .profile-divider {
   color: #CBD5E1;
   font-size: 12px;
@@ -554,13 +596,42 @@ const user = users.find(u => u.id === Number(route.params.id)) || users[0]
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #16A34A;
+  background: currentColor;
   display: inline-block;
 }
 
 .profile-badges {
   display: flex;
   gap: 8px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.role {
+  letter-spacing: 0.06em;
+}
+
+.role-admin {
+  background: #EFF6FF;
+  color: #1D4ED8;
+}
+
+.role-jury {
+  background: #F3E8FF;
+  color: #7C3AED;
+}
+
+.role-candidate {
+  background: #DCFCE7;
+  color: #16A34A;
 }
 
 .profile-grid {
@@ -793,18 +864,26 @@ const user = users.find(u => u.id === Number(route.params.id)) || users[0]
 
 @media (max-width: 992px) {
   .main {
-    margin-left: 0;
+    width: calc(100vw - 256px);
+    max-width: calc(100vw - 256px);
   }
   .content {
     padding: 20px;
   }
-  .page-header {
+  .profile-header {
     flex-direction: column;
-    gap: 14px;
+    text-align: center;
+  }
+  .profile-badges {
+    justify-content: center;
   }
 }
 
 @media (max-width: 768px) {
+  .main {
+    width: 100vw;
+    max-width: 100vw;
+  }
   .header {
     padding: 12px 16px;
     height: auto;
@@ -814,13 +893,6 @@ const user = users.find(u => u.id === Number(route.params.id)) || users[0]
   }
   .search-box {
     width: 100%;
-  }
-  .profile-header {
-    flex-direction: column;
-    text-align: center;
-  }
-  .profile-badges {
-    justify-content: center;
   }
 }
 </style>
