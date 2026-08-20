@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import { useEntretiensStore } from '@/stores/entretiens'
@@ -36,6 +36,11 @@ const triggerToast = (msg) => {
   }, 3500)
 }
 
+onMounted(async () => {
+  await store.fetchEntretiens()
+  await store.fetchCampagnes()
+})
+
 // Actions
 const openDetail = (item) => {
   selectedEntretien.value = item
@@ -47,16 +52,20 @@ const openDelete = (item) => {
   showDeleteModal.value = true
 }
 
-const confirmDelete = () => {
+const confirmDelete = async () => {
   if (!entretienToDelete.value) return
   isDeleting.value = true
-  setTimeout(() => {
-    store.deleteEntretien(entretienToDelete.value.id)
-    isDeleting.value = false
+  try {
+    const deletedProg = entretienToDelete.value.program
+    await store.deleteEntretien(entretienToDelete.value.id)
     showDeleteModal.value = false
-    triggerToast(`L'entretien « ${entretienToDelete.value.program} » a été supprimé.`)
+    triggerToast(`L'entretien « ${deletedProg} » a été supprimé.`)
     entretienToDelete.value = null
-  }, 400)
+  } catch (err) {
+    console.error('Erreur suppression:', err)
+  } finally {
+    isDeleting.value = false
+  }
 }
 
 const navigateToPlanifier = () => {

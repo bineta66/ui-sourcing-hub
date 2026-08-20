@@ -36,6 +36,11 @@ export const resendConvocationEmail = (id) => {
 }
 
 // Espace Candidat : Récupérer les convocations d'entretiens (après RI)
-export const getMesConvocations = () => {
-  return client.get('/api/candidat/mes-convocations/')
+export const getMesConvocations = async () => {
+  try {
+    return await client.get('/api/candidat/entretiens/mes-convocations/')
+  } catch (err) {
+    return client.get('/api/candidat/mes-convocations/')
+  }
 }
+

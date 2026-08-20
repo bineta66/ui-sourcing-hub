@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import { useEntretiensStore } from '@/stores/entretiens'
@@ -11,15 +11,23 @@ const store = useEntretiensStore()
 // Étape du Stepper (1: Details, 2: Planification, 3: Confirmation)
 const currentStep = ref(1)
 
+const todayDate = new Date().toISOString().split('T')[0]
+
 // Formulaire
 const form = ref({
+  campagneId: null,
   program: 'Dew Web IA',
   type: 'Technique', // 'Technique' | 'Motivation' | 'Final'
-  date: 'Oct 26, 2023',
-  time: '10:30 AM',
+  date: todayDate,
+  time: '09:00',
   duration: '45 Minutes',
+  lieu: 'Simplon Sénégal',
+  lien_visio: 'https://meet.google.com/session-entretiens',
   notes: ''
 })
+
+// Message d'erreur
+const errorMessage = ref('')
 
 // Modale pour ajouter un participant
 const showAddModal = ref(false)
@@ -29,8 +37,27 @@ const addModalType = ref('recruiter') // 'recruiter' | 'candidate'
 const isSaving = ref(false)
 const isDraftSaved = ref(true)
 
+onMounted(async () => {
+  await store.fetchCampagnes()
+  await store.fetchRecruiters()
+  if (store.campagnes && store.campagnes.length > 0) {
+    form.value.campagneId = store.campagnes[0].id
+    form.value.program = store.campagnes[0].title
+    await store.fetchCandidates(store.campagnes[0].id)
+  }
+})
+
+const onCampagneChange = async () => {
+  const selected = store.campagnes.find(c => c.id === form.value.campagneId)
+  if (selected) {
+    form.value.program = selected.title
+    await store.fetchCandidates(selected.id)
+  }
+}
+
 // Navigation du stepper
 const setStep = (step) => {
+  errorMessage.value = ''
   if (step <= currentStep.value || step === currentStep.value + 1) {
     currentStep.value = step
   }
@@ -54,28 +81,48 @@ const handleParticipantAdded = (participant) => {
   }
 }
 
-// Planifier l'entretien
-const submitEntretien = () => {
+// Planifier et confirmer l'entretien
+const submitEntretien = async () => {
+  errorMessage.value = ''
+
+  if (store.selectedRecruiters.length === 0) {
+    errorMessage.value = 'Veuillez affecter au moins un membre du jury.'
+    currentStep.value = 2
+    return
+  }
+
+  if (store.selectedCandidates.length === 0) {
+    errorMessage.value = 'Veuillez sélectionner au moins un candidat pour cette session.'
+    currentStep.value = 2
+    return
+  }
+
   isSaving.value = true
 
-  setTimeout(() => {
-    store.createEntretien({
+  try {
+    await store.createAndConfirmEntretien({
+      campagneId: form.value.campagneId,
       program: form.value.program,
       type: form.value.type,
       date: form.value.date,
       time: form.value.time,
       duration: form.value.duration,
+      lieu: form.value.lieu,
+      lien_visio: form.value.lien_visio,
       notes: form.value.notes
     })
 
-    isSaving.value = false
     router.push('/entretiens')
-  }, 400)
+  } catch (err) {
+    console.error('Erreur confirmation entretien:', err)
+    errorMessage.value = err.message || 'Une erreur est survenue lors de la confirmation.'
+  } finally {
+    isSaving.value = false
+  }
 }
 
 const handleQuickPlan = () => {
-  // Clic sur le bouton pointillé "+ Planifier"
-  submitEntretien()
+  currentStep.value = 3
 }
 </script>
 
@@ -192,19 +239,22 @@ const handleQuickPlan = () => {
 
         <!-- Stepper Step 1 & 2 Form Layout (Main 2 Columns Card) -->
         <div v-if="currentStep === 1 || currentStep === 2" class="form-main-card">
+          <!-- Alert error banner if validation failed -->
+          <div v-if="errorMessage" class="alert-error-banner mb-3">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <span>{{ errorMessage }}</span>
+          </div>
+
           <div class="form-grid-layout">
             <!-- Left Column: Form Details -->
             <div class="left-form-column">
-              <!-- Field 1: Programme -->
+              <!-- Field 1: Programme / Campagne -->
               <div class="form-field-group">
-                <label class="field-label">Programme</label>
+                <label class="field-label">Programme / Campagne</label>
                 <div class="custom-select-wrapper">
-                  <select v-model="form.program" class="form-select-control">
-                    <option value="Dew Web IA">Dew Web IA</option>
-                    <option value="Developpement Web">Developpement Web</option>
-                    <option value="Designer UX/UI créatif">Designer UX/UI créatif</option>
-                    <option value="Assistance digital">Assistance digital</option>
-                    <option value="Analyste en stratégie commerciale">Analyste en stratégie commerciale</option>
+                  <select v-model="form.campagneId" @change="onCampagneChange" class="form-select-control">
+                    <option v-for="c in store.campagnes" :key="c.id" :value="c.id">{{ c.title }}</option>
+                    <option v-if="!store.campagnes || store.campagnes.length === 0" :value="null">Dew Web IA</option>
                   </select>
                   <i class="bi bi-chevron-down field-arrow"></i>
                 </div>
@@ -250,9 +300,8 @@ const handleQuickPlan = () => {
                     <i class="bi bi-calendar3 input-leading-icon"></i>
                     <input
                       v-model="form.date"
-                      type="text"
+                      type="date"
                       class="triplet-input"
-                      placeholder="Oct 26, 2023"
                     />
                   </div>
                 </div>
@@ -264,9 +313,8 @@ const handleQuickPlan = () => {
                     <i class="bi bi-clock input-leading-icon"></i>
                     <input
                       v-model="form.time"
-                      type="text"
+                      type="time"
                       class="triplet-input"
-                      placeholder="10:30 AM"
                     />
                   </div>
                 </div>
@@ -1215,6 +1263,18 @@ const handleQuickPlan = () => {
 .btn-step-confirm:hover {
   background: #B50942;
   transform: translateY(-1px);
+}
+
+.alert-error-banner {
+  background-color: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #B91C1C;
+  padding: 0.85rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
 }
 
 /* ============================================================

@@ -234,11 +234,13 @@ const handleLogout = async () => {
 }
 
 const upcomingConvocations = computed(() => {
-  return convocations.value.filter((c) => c.statut === 'en_attente' || c.statut === 'a_venir')
+  const s = ['en_attente', 'a_venir', 'confirme', 'CONFIRME']
+  return convocations.value.filter((c) => s.includes(c.statut?.toLowerCase?.() || c.statut))
 })
 
 const pastConvocations = computed(() => {
-  return convocations.value.filter((c) => c.statut === 'present' || c.statut === 'termine')
+  const s = ['present', 'termine', 'absent', 'annulee', 'annule']
+  return convocations.value.filter((c) => s.includes(c.statut?.toLowerCase?.() || c.statut))
 })
 
 const openConvocation = (conv) => {

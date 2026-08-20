@@ -1,11 +1,108 @@
 import { defineStore } from 'pinia'
 import avatarImg from '@/assets/avatar.png'
+import {
+  getEntretiens,
+  createEntretien as createEntretienApi,
+  confirmerEtEnvoyerConvocations,
+  deleteEntretien as deleteEntretienApi,
+} from '@/api/endpoints/entretiens'
+import { getCampagnes } from '@/api/endpoints/campagnes'
+import { listUsersApi } from '@/api/endpoints/accounts'
+import { getCampagneCandidats } from '@/api/endpoints/reunionInformation'
+
+// Helper pour convertir un objet API Entretien en format UI
+const formatEntretienFromApi = (item) => {
+  let icon = 'code-slash'
+  let iconBg = '#E0F2FE'
+  let iconColor = '#0284C7'
+  let department = 'DÉPARTEMENT TECH & DIGITAL'
+  const prog = item.campagne_titre || item.campagne?.title || item.program || 'Session Entretien'
+
+  if (prog.includes('Design')) {
+    icon = 'palette'
+    iconBg = '#FEF3C7'
+    iconColor = '#D97706'
+    department = 'DESIGN STUDIO'
+  } else if (prog.includes('Assistance') || prog.includes('Management')) {
+    icon = 'briefcase'
+    iconBg = '#F3E8FF'
+    iconColor = '#9333EA'
+    department = 'MANAGEMENT'
+  } else if (prog.includes('Stratégie') || prog.includes('Analyste')) {
+    icon = 'graph-up-arrow'
+    iconBg = '#DCFCE7'
+    iconColor = '#16A34A'
+    department = 'GROWTH & OPS'
+  }
+
+  const candidates = (item.creneaux || [])
+    .filter((c) => c.candidature_details || c.candidature)
+    .map((c) => {
+      const d = c.candidature_details || {}
+      return {
+        id: d.id || c.candidature,
+        name: `${d.prenom || ''} ${d.nom || ''}`.trim() || 'Candidat',
+        role: 'Candidat',
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(d.prenom || 'C')}&background=D20C4F&color=fff&size=64`,
+      }
+    })
+
+  const recruiters = (item.jurys_details || []).map((j) => ({
+    id: j.id,
+    name: j.full_name || `${j.first_name || ''} ${j.last_name || ''}`.trim() || j.email,
+    role: j.role === 'ADMIN' ? 'Administrateur' : 'Membre du Jury',
+    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(j.first_name || 'J')}&background=00313C&color=fff&size=64`,
+  }))
+
+  const dateStr = item.date || 'Oct 26, 2023'
+  let dayName = 'Lundi'
+  try {
+    if (item.date) {
+      dayName = new Date(item.date).toLocaleDateString('fr-FR', { weekday: 'long' })
+      dayName = dayName.charAt(0).toUpperCase() + dayName.slice(1)
+    }
+  } catch (e) {
+    dayName = 'Jour'
+  }
+
+  const hDeb = item.heure_debut ? item.heure_debut.substring(0, 5) : '09:00'
+  const hFin = item.heure_fin ? item.heure_fin.substring(0, 5) : '12:00'
+  const timeStr = `${hDeb} - ${hFin}`
+
+  return {
+    id: item.id,
+    campagneId: item.campagne,
+    program: prog,
+    department: department,
+    windowLabel: dateStr,
+    windowSub: item.statut || 'CONFIRME',
+    day: dayName,
+    time: timeStr,
+    date: dateStr,
+    duration: `${item.duree_minutes || 45} Minutes`,
+    type: item.type ? item.type.toUpperCase() : 'TECHNIQUE',
+    statut: item.statut,
+    lieu: item.lieu || 'Simplon Sénégal',
+    lienVisio: item.lien_visio || '',
+    icon: icon,
+    iconBg: iconBg,
+    iconColor: iconColor,
+    notes: item.notes || '',
+    candidates: candidates.length > 0 ? candidates.slice(0, 3) : [
+      { id: 101, name: 'Candidat convoqué', role: 'Candidat', avatar: avatarImg }
+    ],
+    extraCandidatesCount: Math.max(0, candidates.length - 3),
+    recruiters: recruiters.length > 0 ? recruiters : [
+      { id: 1, name: 'Jury assigné', role: 'Membre du Jury', avatar: avatarImg }
+    ],
+  }
+}
 
 export const useEntretiensStore = defineStore('entretiens', {
   state: () => ({
     // Stats KPI
     kpis: {
-      upcomingWeek: 10,
+      upcomingWeek: 4,
       upcomingTrend: '+12%',
       totalDevWebIa: 156,
       totalTrend: 'Stable',
@@ -24,7 +121,13 @@ export const useEntretiensStore = defineStore('entretiens', {
     currentPage: 1,
     itemsPerPage: 4,
 
-    // Liste des entretiens
+    loading: false,
+    error: null,
+
+    // Campagnes disponibles
+    campagnes: [],
+
+    // Liste des entretiens chargés
     entretiens: [
       {
         id: 1,
@@ -40,7 +143,7 @@ export const useEntretiensStore = defineStore('entretiens', {
         icon: 'code-slash',
         iconBg: '#E0F2FE',
         iconColor: '#0284C7',
-        notes: 'Évaluer la maîtrise de Vue 3 Composition API, architecture modulaire, Pinia et l’intégration responsive selon maquette.',
+        notes: 'Évaluer la maîtrise de Vue 3 Composition API, architecture modulaire, Pinia et l’intégration responsive.',
         candidates: [
           { id: 101, name: 'Marcus Thorne', role: 'Dev Frontend', avatar: avatarImg },
           { id: 102, name: 'Lisa Cooper', role: 'Dev Fullstack', avatar: avatarImg },
@@ -51,83 +154,10 @@ export const useEntretiensStore = defineStore('entretiens', {
           { id: 1, name: 'Marcus Thorne', role: 'Lead Developer', avatar: avatarImg },
           { id: 2, name: 'Lisa Cooper', role: 'HR Specialist', avatar: avatarImg }
         ]
-      },
-      {
-        id: 2,
-        program: 'Assistance digital',
-        department: 'MANAGEMENT',
-        windowLabel: 'Oct 14 - Oct 14',
-        windowSub: 'Single Day',
-        day: 'Mardi',
-        time: '02:30 PM - 04:00 PM',
-        date: 'Oct 14, 2023',
-        duration: '45 Minutes',
-        type: 'MOTIVATION',
-        icon: 'briefcase',
-        iconBg: '#F3E8FF',
-        iconColor: '#9333EA',
-        notes: 'Vérifier la rigueur administrative, la communication professionnelle et l’aisance avec les outils de productivité.',
-        candidates: [
-          { id: 104, name: 'Awa Diop', role: 'Assistante de gestion', avatar: avatarImg },
-          { id: 105, name: 'Mamadou Ba', role: 'Office Manager', avatar: avatarImg }
-        ],
-        extraCandidatesCount: 1,
-        recruiters: [
-          { id: 2, name: 'Lisa Cooper', role: 'HR Specialist', avatar: avatarImg }
-        ]
-      },
-      {
-        id: 3,
-        program: 'Designer UX/UI créatif',
-        department: 'DESIGN STUDIO',
-        windowLabel: 'Oct 15 - Oct 18',
-        windowSub: '4-Day Window',
-        day: 'Mercredi',
-        time: '09:00 AM - 11:30 AM',
-        date: 'Oct 15, 2023',
-        duration: '60 Minutes',
-        type: 'TECHNIQUE',
-        icon: 'palette',
-        iconBg: '#FEF3C7',
-        iconColor: '#D97706',
-        notes: 'Revue du portfolio, analyse de cas d’usage Figma, design tokens et cohérence de l’expérience utilisateur.',
-        candidates: [
-          { id: 106, name: 'Elena Rostova', role: 'Product Designer', avatar: avatarImg },
-          { id: 107, name: 'Karim Ndiaye', role: 'UI Specialist', avatar: avatarImg },
-          { id: 108, name: 'Chloé Dupuis', role: 'UX Researcher', avatar: avatarImg }
-        ],
-        extraCandidatesCount: 12,
-        recruiters: [
-          { id: 1, name: 'Marcus Thorne', role: 'Lead Developer', avatar: avatarImg },
-          { id: 2, name: 'Lisa Cooper', role: 'HR Specialist', avatar: avatarImg }
-        ]
-      },
-      {
-        id: 4,
-        program: 'Analyste en stratégie commerciale',
-        department: 'GROWTH & OPS',
-        windowLabel: 'Oct 16 - Oct 16',
-        windowSub: 'Single Day',
-        day: 'Jeudi',
-        time: '11:00 AM - 12:30 PM',
-        date: 'Oct 16, 2023',
-        duration: '45 Minutes',
-        type: 'MOTIVATION',
-        icon: 'graph-up-arrow',
-        iconBg: '#DCFCE7',
-        iconColor: '#16A34A',
-        notes: 'Analyse d’un business case, stratégie go-to-market, KPI d’acquisition et capacité de négociation.',
-        candidates: [
-          { id: 109, name: 'Thomas Bernard', role: 'Growth Specialist', avatar: avatarImg }
-        ],
-        extraCandidatesCount: 4,
-        recruiters: [
-          { id: 2, name: 'Lisa Cooper', role: 'HR Specialist', avatar: avatarImg }
-        ]
       }
     ],
 
-    // Pool de recruteurs disponibles
+    // Pool de recruteurs / jurys disponibles
     availableRecruiters: [
       {
         id: 1,
@@ -142,20 +172,6 @@ export const useEntretiensStore = defineStore('entretiens', {
         role: 'HR Specialist',
         avatar: avatarImg,
         selected: false
-      },
-      {
-        id: 3,
-        name: 'Sarah Jenkins',
-        role: 'Senior Tech Lead',
-        avatar: avatarImg,
-        selected: false
-      },
-      {
-        id: 4,
-        name: 'Jean-Marc Dupont',
-        role: 'Talent Acquisition Manager',
-        avatar: avatarImg,
-        selected: false
       }
     ],
 
@@ -163,33 +179,17 @@ export const useEntretiensStore = defineStore('entretiens', {
     availableCandidates: [
       {
         id: 101,
-        name: 'Marcus Thorne',
-        role: 'Lead Developer',
-        department: 'Dev Web / IA',
+        name: 'Awa Diop',
+        role: 'Assistante de gestion',
+        department: 'Management',
         avatar: avatarImg,
         selected: true
       },
       {
         id: 102,
-        name: 'Lisa Cooper',
-        role: 'HR Specialist',
+        name: 'Mamadou Ba',
+        role: 'Office Manager',
         department: 'Management',
-        avatar: avatarImg,
-        selected: false
-      },
-      {
-        id: 103,
-        name: 'Amadou Diallo',
-        role: 'Développeur Fullstack Vue/Django',
-        department: 'Dev Web / IA',
-        avatar: avatarImg,
-        selected: false
-      },
-      {
-        id: 104,
-        name: 'Sophie Martin',
-        role: 'Product & UI Designer',
-        department: 'Design Studio',
         avatar: avatarImg,
         selected: false
       }
@@ -221,10 +221,10 @@ export const useEntretiensStore = defineStore('entretiens', {
         }
         // Filtre Créneau
         if (state.filterTimeSlot && state.filterTimeSlot !== 'Heure' && state.filterTimeSlot !== 'Tous') {
-          if (state.filterTimeSlot === 'Matin' && !item.time.includes('AM')) {
+          if (state.filterTimeSlot === 'Matin' && !item.time.includes('AM') && !item.time.includes('08:') && !item.time.includes('09:') && !item.time.includes('10:') && !item.time.includes('11:')) {
             return false
           }
-          if (state.filterTimeSlot === 'Apres-midi' && !item.time.includes('PM')) {
+          if (state.filterTimeSlot === 'Apres-midi' && !item.time.includes('PM') && !item.time.includes('13:') && !item.time.includes('14:') && !item.time.includes('15:') && !item.time.includes('16:') && !item.time.includes('17:')) {
             return false
           }
         }
@@ -234,7 +234,7 @@ export const useEntretiensStore = defineStore('entretiens', {
           const matchTitle = item.program.toLowerCase().includes(q)
           const matchDept = item.department.toLowerCase().includes(q)
           const matchType = item.type.toLowerCase().includes(q)
-          const matchCandidate = item.candidates.some(c => c.name.toLowerCase().includes(q))
+          const matchCandidate = (item.candidates || []).some(c => c.name.toLowerCase().includes(q))
           if (!matchTitle && !matchDept && !matchType && !matchCandidate) {
             return false
           }
@@ -305,18 +305,18 @@ export const useEntretiensStore = defineStore('entretiens', {
     },
 
     addRecruiter(recruiter) {
-      const newId = Date.now()
+      const newId = recruiter.id || Date.now()
       this.availableRecruiters.push({
         id: newId,
         name: recruiter.name,
-        role: recruiter.role || 'Recruteur',
+        role: recruiter.role || 'Membre du Jury',
         avatar: recruiter.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(recruiter.name)}&background=00313C&color=fff&size=64`,
         selected: true
       })
     },
 
     addCandidate(candidate) {
-      const newId = Date.now()
+      const newId = candidate.id || Date.now()
       this.availableCandidates.push({
         id: newId,
         name: candidate.name,
@@ -327,63 +327,166 @@ export const useEntretiensStore = defineStore('entretiens', {
       })
     },
 
-    createEntretien(payload) {
-      const newId = Date.now()
-      const recruiters = this.availableRecruiters.filter(r => r.selected)
-      const candidates = this.availableCandidates.filter(c => c.selected)
-
-      let icon = 'code-slash'
-      let iconBg = '#E0F2FE'
-      let iconColor = '#0284C7'
-      let department = 'DÉPARTEMENT TECH & DIGITAL'
-
-      if (payload.program.includes('Design')) {
-        icon = 'palette'
-        iconBg = '#FEF3C7'
-        iconColor = '#D97706'
-        department = 'DESIGN STUDIO'
-      } else if (payload.program.includes('Assistance') || payload.program.includes('Management')) {
-        icon = 'briefcase'
-        iconBg = '#F3E8FF'
-        iconColor = '#9333EA'
-        department = 'MANAGEMENT'
-      } else if (payload.program.includes('Stratégie') || payload.program.includes('Analyste')) {
-        icon = 'graph-up-arrow'
-        iconBg = '#DCFCE7'
-        iconColor = '#16A34A'
-        department = 'GROWTH & OPS'
+    // Charger les campagnes réelles depuis l'API
+    async fetchCampagnes() {
+      try {
+        const { data } = await getCampagnes()
+        const items = Array.isArray(data) ? data : (data?.results || [])
+        if (items.length > 0) {
+          this.campagnes = items
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des campagnes:', err)
       }
-
-      const newEntretien = {
-        id: newId,
-        program: payload.program || 'Dew Web IA',
-        department: department,
-        windowLabel: payload.date || 'Oct 26 - Oct 26',
-        windowSub: 'Single Day',
-        day: 'Jeudi',
-        time: payload.time || '10:30 AM',
-        date: payload.date || 'Oct 26, 2023',
-        duration: payload.duration || '45 Minutes',
-        type: payload.type ? payload.type.toUpperCase() : 'TECHNIQUE',
-        icon: icon,
-        iconBg: iconBg,
-        iconColor: iconColor,
-        notes: payload.notes || '',
-        candidates: candidates.length > 0 ? candidates.slice(0, 3) : [
-          { id: 101, name: 'Marcus Thorne', role: 'Lead Developer', avatar: avatarImg }
-        ],
-        extraCandidatesCount: Math.max(0, candidates.length - 3),
-        recruiters: recruiters.length > 0 ? recruiters : [
-          { id: 1, name: 'Marcus Thorne', role: 'Lead Developer', avatar: avatarImg }
-        ]
-      }
-
-      this.entretiens.unshift(newEntretien)
-      this.kpis.upcomingWeek += 1
-      return newEntretien
     },
 
-    deleteEntretien(id) {
+    // Charger les jurys réels depuis l'API
+    async fetchRecruiters() {
+      try {
+        const { data } = await listUsersApi()
+        const users = Array.isArray(data) ? data : (data?.results || [])
+        const jurys = users.filter(u => u.role === 'JURY' || u.role === 'ADMIN')
+        if (jurys.length > 0) {
+          this.availableRecruiters = jurys.map((u, idx) => ({
+            id: u.id,
+            name: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email,
+            role: u.role === 'ADMIN' ? 'Administrateur' : 'Membre du Jury',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.first_name || u.email)}&background=00313C&color=fff&size=64`,
+            selected: idx === 0 // Premier sélectionné par défaut
+          }))
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des jurys:', err)
+      }
+    },
+
+    // Charger les candidats d'une campagne
+    async fetchCandidates(campagneId) {
+      if (!campagneId) return
+      try {
+        const { data } = await getCampagneCandidats(campagneId)
+        const items = Array.isArray(data) ? data : (data?.results || [])
+        if (items.length > 0) {
+          this.availableCandidates = items.map((c, idx) => ({
+            id: c.id,
+            name: `${c.prenom || ''} ${c.nom || ''}`.trim(),
+            role: 'Candidat',
+            department: c.campagne_titre || 'Candidature',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(c.prenom || 'C')}&background=D20C4F&color=fff&size=64`,
+            selected: idx < 3 // 3 premiers pré-sélectionnés
+          }))
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des candidats:', err)
+      }
+    },
+
+    // Charger tous les entretiens depuis le backend
+    async fetchEntretiens() {
+      this.loading = true
+      this.error = null
+      try {
+        const { data } = await getEntretiens()
+        const items = Array.isArray(data) ? data : (data?.results || [])
+        if (items.length > 0) {
+          this.entretiens = items.map(formatEntretienFromApi)
+          this.kpis.upcomingWeek = this.entretiens.length
+        }
+      } catch (err) {
+        console.error('Erreur chargement entretiens:', err)
+        this.error = err.message || 'Erreur de chargement'
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // Planifier et confirmer une session d'entretiens (Action principale)
+    async createAndConfirmEntretien(form) {
+      this.loading = true
+      this.error = null
+
+      try {
+        const selectedRecruiters = this.selectedRecruiters
+        const selectedCandidates = this.selectedCandidates
+
+        if (selectedRecruiters.length === 0) {
+          throw new Error('Veuillez sélectionner au moins un membre du jury.')
+        }
+        if (selectedCandidates.length === 0) {
+          throw new Error('Veuillez sélectionner au moins un candidat.')
+        }
+
+        // Trouver la campagne
+        let campagneId = form.campagneId
+        if (!campagneId && this.campagnes.length > 0) {
+          campagneId = this.campagnes[0].id
+        }
+
+        // Calculer les horaires découpés par créneau
+        const startMinutes = 9 * 60 // 09:00
+        const durationMin = parseInt(form.duration) || 45
+
+        const creneauxInput = selectedCandidates.map((cand, idx) => {
+          const debTotal = startMinutes + (idx * durationMin)
+          const finTotal = debTotal + durationMin
+          const hDeb = `${String(Math.floor(debTotal / 60)).padStart(2, '0')}:${String(debTotal % 60).padStart(2, '0')}:00`
+          const hFin = `${String(Math.floor(finTotal / 60)).padStart(2, '0')}:${String(finTotal % 60).padStart(2, '0')}:00`
+          return {
+            candidature_id: cand.id,
+            heure_debut: hDeb,
+            heure_fin: hFin,
+            jury_ids: selectedRecruiters.map(r => r.id)
+          }
+        })
+
+        // Normaliser la date au format YYYY-MM-DD
+        let formattedDate = form.date
+        if (!formattedDate || !formattedDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          formattedDate = new Date().toISOString().split('T')[0]
+        }
+
+        const payload = {
+          campagne: campagneId,
+          type: (form.type || 'TECHNIQUE').toUpperCase(),
+          date: formattedDate,
+          heure_debut: creneauxInput[0]?.heure_debut || '09:00:00',
+          heure_fin: creneauxInput[creneauxInput.length - 1]?.heure_fin || '12:00:00',
+          duree_minutes: durationMin,
+          lieu: form.lieu || 'Simplon Sénégal',
+          lien_visio: form.lien_visio || 'https://meet.google.com/session-entretiens',
+          notes: form.notes || '',
+          jury_ids: selectedRecruiters.map(r => r.id),
+          creneaux_input: creneauxInput
+        }
+
+        // 1. Création de l'entretien avec ses créneaux
+        const createRes = await createEntretienApi(payload)
+        const newEntretienId = createRes.data?.id
+
+        if (newEntretienId) {
+          // 2. Déclenchement de la confirmation et envoi des convocations
+          await confirmerEtEnvoyerConvocations(newEntretienId, { envoyer_emails: true })
+        }
+
+        // 3. Rechargement de la liste
+        await this.fetchEntretiens()
+        return createRes.data
+      } catch (err) {
+        console.error('Erreur lors de la planification/confirmation:', err)
+        const errMsg = err.response?.data?.details?.[0] || err.response?.data?.error || err.message || 'Une erreur est survenue'
+        this.error = errMsg
+        throw new Error(errMsg)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async deleteEntretien(id) {
+      try {
+        await deleteEntretienApi(id)
+      } catch (err) {
+        console.warn('API delete error (possible fallback local):', err)
+      }
       const idx = this.entretiens.findIndex(e => e.id === id)
       if (idx !== -1) {
         this.entretiens.splice(idx, 1)
