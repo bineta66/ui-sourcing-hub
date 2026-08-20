@@ -24,7 +24,7 @@ const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', to: '/campagnes' },
   { id: 'presences-ri', label: 'Présences RI', icon: 'fa-solid fa-qrcode', to: '/admin/presences-ri' },
   { id: 'entretien', label: 'Entretien', icon: 'fa-regular fa-calendar-check', to: '/entretiens' },
-  { id: 'candidates', label: 'Candidates', icon: 'fa-solid fa-user-group', to: '/gestion-utilisateurs' },
+  { id: 'entretiens-jury', label: 'Entretiens Jurés', icon: 'fa-regular fa-calendar-check', to: '/entretiensjury' },
   { id: 'campagnes', label: 'Campagnes', icon: 'fa-solid fa-file-lines', to: '/campagnes' },
   { id: 'utilisateurs', label: 'Utilisateurs', icon: 'fa-solid fa-users', to: '/gestion-utilisateurs' },
   { id: 'ai-analytics', label: 'AI Analytics', icon: 'fa-solid fa-brain', to: '/campagnes' },

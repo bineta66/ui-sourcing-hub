@@ -21,6 +21,11 @@ import CandidateCandidature from '../views/candidate/CandidateCandidature.vue'
 import CandidateProfile from '../views/candidate/Profile.vue'
 import EntretiensDashboard from '../views/entretiens/EntretiensDashboard.vue'
 import PlanifierEntretien from '../views/entretiens/PlanifierEntretien.vue'
+import ListeEntretien from '../views/jure/ListeEntretien.vue'
+import CandidatsEntretien from '../views/jure/CandidatsEntretien.vue'
+import EntretienTechnique from '../views/jure/EntretienTechnique.vue'
+import EntretienMotivation from '../views/jure/EntretienMotivation.vue'
+import DetailCandidat from '@/views/jure/DetailCandidat.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -186,6 +191,65 @@ const router = createRouter({
       name: 'candidate-profile',
       component: CandidateProfile,
       meta: { requiresAuth: true, roles: ['CANDIDAT'] },
+    },
+      // Espace Jury - Entretiens 
+    {
+      path: '/jury/entretiens',
+      name: 'jury-entretiens-liste',
+      component: ListeEntretien,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
+    },
+    {
+      path: '/jury/entretiens/:entretienId/candidats',
+      name: 'jury-candidats-entretien',
+      component: CandidatsEntretien,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
+    },
+    {
+      path: '/jury/entretiens/:entretienId/candidats/:candidatId/technique',
+      name: 'jury-entretien-technique',
+      component: EntretienTechnique,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
+    },
+    {
+      path: '/jury/entretiens/:entretienId/candidats/:candidatId/motivation',
+      name: 'jury-entretien-motivation',
+      component: EntretienMotivation,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
+    },
+    // Redirection pour l'ancienne URL
+    {
+      path: '/entretiensjury',
+      redirect: '/jury/entretiens',
+    },{
+      path: '/entretiensjury',
+      name: 'ListeEntretiens',
+      component: ListeEntretien,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
+    },
+    {
+      path: '/entretiensjury/:entretienId/candidats',
+      name: 'CandidatsEntretien',
+      component: CandidatsEntretien,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] }
+    },
+    {
+      path: '/jury/entretiens/:entretienId/candidats/:candidatId',
+      name: 'jury-candidat-detail',
+      component: DetailCandidat,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
+    },
+    {
+      path: '/candidats/:id/technique',
+      name: 'EntretienTechnique',
+      component: EntretienTechnique,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] }
+    },
+    {
+      path: '/candidats/:id/motivation',
+      name: 'EntretienMotivation',
+      component: EntretienMotivation,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] }
     },
   ],
 })
