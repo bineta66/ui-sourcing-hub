@@ -204,28 +204,21 @@ const getStatutInfo = (status) => {
 
 
           <!-- Profil -->
-
           <div class="d-flex align-items-center gap-3">
-
             <div class="user-information">
-
               <div class="user-name">
-                {{ auth.user?.first_name || auth.user?.username || 'Utilisateur' }}
+                {{ auth.displayName }}
               </div>
-
               <div class="user-role">
-                {{ auth.user?.is_admin ? 'ADMIN' : 'UTILISATEUR' }}
+                {{ auth.userRole || 'Administrateur' }}
               </div>
-
             </div>
 
-
             <img
-              src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=100&auto=format&fit=crop"
-              alt="Avatar de Ndeye"
+              :src="`https://ui-avatars.com/api/?name=${encodeURIComponent(auth.displayName)}&background=D20C4F&color=fff&size=36`"
+              :alt="auth.displayName"
               class="user-avatar"
             />
-
           </div>
 
         </div>

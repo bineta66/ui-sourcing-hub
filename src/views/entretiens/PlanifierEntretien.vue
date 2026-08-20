@@ -3,20 +3,28 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import { useEntretiensStore } from '@/stores/entretiens'
+import { useAuthStore } from '@/stores/auth'
+import { createCandidature } from '@/api/endpoints/candidatures'
 import AddParticipantModal from '@/components/entretiens/AddParticipantModal.vue'
 
 const router = useRouter()
 const store = useEntretiensStore()
+const authStore = useAuthStore()
 
 // Étape du Stepper (1: Details, 2: Planification, 3: Confirmation)
 const currentStep = ref(1)
 
 const todayDate = new Date().toISOString().split('T')[0]
+const formattedTodayDate = new Date().toLocaleDateString('fr-FR', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric'
+})
 
 // Formulaire
 const form = ref({
   campagneId: null,
-  program: 'Dew Web IA',
+  program: '',
   type: 'Technique', // 'Technique' | 'Motivation' | 'Final'
   date: todayDate,
   time: '09:00',
@@ -35,15 +43,14 @@ const addModalType = ref('recruiter') // 'recruiter' | 'candidate'
 
 // État de soumission
 const isSaving = ref(false)
-const isDraftSaved = ref(true)
 
 onMounted(async () => {
-  await store.fetchCampagnes()
+  const camps = await store.fetchCampagnes()
   await store.fetchRecruiters()
-  if (store.campagnes && store.campagnes.length > 0) {
-    form.value.campagneId = store.campagnes[0].id
-    form.value.program = store.campagnes[0].title
-    await store.fetchCandidates(store.campagnes[0].id)
+  if (camps && camps.length > 0) {
+    form.value.campagneId = camps[0].id
+    form.value.program = camps[0].title
+    await store.fetchCandidates(camps[0].id)
   }
 })
 
@@ -52,6 +59,8 @@ const onCampagneChange = async () => {
   if (selected) {
     form.value.program = selected.title
     await store.fetchCandidates(selected.id)
+  } else {
+    store.availableCandidates = []
   }
 }
 
@@ -73,11 +82,27 @@ const openAddCandidate = () => {
   showAddModal.value = true
 }
 
-const handleParticipantAdded = (participant) => {
+const handleParticipantAdded = async (participant) => {
   if (participant.type === 'recruiter') {
     store.addRecruiter(participant)
   } else {
-    store.addCandidate(participant)
+    try {
+      if (form.value.campagneId) {
+        await createCandidature({
+          campagne: form.value.campagneId,
+          nom: participant.nom || 'Candidat',
+          prenom: participant.prenom || participant.name,
+          email: participant.email,
+          telephone: participant.telephone || ''
+        })
+        await store.fetchCandidates(form.value.campagneId)
+      } else {
+        store.addCandidate(participant)
+      }
+    } catch (err) {
+      console.warn('Création API directe échouée, fallback local:', err)
+      store.addCandidate(participant)
+    }
   }
 }
 
@@ -144,7 +169,7 @@ const handleQuickPlan = () => {
         </div>
 
         <div class="header-actions">
-          <span class="header-date">Oct 26, 2023</span>
+          <span class="header-date">{{ formattedTodayDate }}</span>
 
           <button class="icon-btn notification-btn" title="Notifications">
             <i class="bi bi-bell"></i>
@@ -154,13 +179,13 @@ const handleQuickPlan = () => {
           <div class="user-pill">
             <div class="avatar">
               <img
-                src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80"
-                alt="Ndeye"
+                :src="`https://ui-avatars.com/api/?name=${encodeURIComponent(authStore.displayName)}&background=D20C4F&color=fff&size=32`"
+                :alt="authStore.displayName"
               />
             </div>
             <div class="user-meta">
-              <span class="user-name">Ndeye</span>
-              <span class="user-role">Supervisor</span>
+              <span class="user-name">{{ authStore.displayName }}</span>
+              <span class="user-role">{{ authStore.userRole || 'Administrateur' }}</span>
             </div>
           </div>
         </div>
@@ -254,7 +279,7 @@ const handleQuickPlan = () => {
                 <div class="custom-select-wrapper">
                   <select v-model="form.campagneId" @change="onCampagneChange" class="form-select-control">
                     <option v-for="c in store.campagnes" :key="c.id" :value="c.id">{{ c.title }}</option>
-                    <option v-if="!store.campagnes || store.campagnes.length === 0" :value="null">Dew Web IA</option>
+                    <option v-if="!store.campagnes || store.campagnes.length === 0" :value="null">Aucune campagne disponible</option>
                   </select>
                   <i class="bi bi-chevron-down field-arrow"></i>
                 </div>
@@ -370,7 +395,17 @@ const handleQuickPlan = () => {
               <div class="selection-section">
                 <h4 class="selection-section-header">ÉQUIPE DES RECRUTEURS</h4>
 
-                <div class="person-cards-list">
+                <div v-if="store.loadingRecruiters" class="text-center py-3 text-muted">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  <span>Chargement des jurys...</span>
+                </div>
+
+                <div v-else-if="store.availableRecruiters.length === 0" class="card border-0 bg-light p-3 text-center text-muted small rounded-3 mb-2">
+                  <i class="bi bi-person-x fs-5 d-block mb-1 text-secondary"></i>
+                  <span>Aucun membre du jury disponible.</span>
+                </div>
+
+                <div v-else class="person-cards-list">
                   <div
                     v-for="recruiter in store.availableRecruiters"
                     :key="recruiter.id"
@@ -406,11 +441,21 @@ const handleQuickPlan = () => {
                 </button>
               </div>
 
-              <!-- Section 2: LES CANDIDATES -->
+              <!-- Section 2: LES CANDIDATS -->
               <div class="selection-section mt-4">
                 <h4 class="selection-section-header">LES CANDIDATS</h4>
 
-                <div class="person-cards-list">
+                <div v-if="store.loadingCandidates" class="text-center py-3 text-muted">
+                  <span class="spinner-border spinner-border-sm me-2"></span>
+                  <span>Chargement des candidats...</span>
+                </div>
+
+                <div v-else-if="store.availableCandidates.length === 0" class="card border-0 bg-light p-3 text-center text-muted small rounded-3 mb-2">
+                  <i class="bi bi-people fs-5 d-block mb-1 text-secondary"></i>
+                  <span>Aucun candidat enregistré pour cette campagne.</span>
+                </div>
+
+                <div v-else class="person-cards-list">
                   <div
                     v-for="candidate in store.availableCandidates"
                     :key="candidate.id"

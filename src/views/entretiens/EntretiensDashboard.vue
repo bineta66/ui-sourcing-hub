@@ -116,13 +116,13 @@ const handleUseAIQuestions = () => {
           <div class="user-pill">
             <div class="avatar">
               <img
-                src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80"
-                alt="Ndeye"
+                :src="`https://ui-avatars.com/api/?name=${encodeURIComponent(authStore.displayName)}&background=D20C4F&color=fff&size=32`"
+                :alt="authStore.displayName"
               />
             </div>
             <div class="user-meta">
-              <span class="user-name">Ndeye</span>
-              <span class="user-role">Recruitment Supervisor</span>
+              <span class="user-name">{{ authStore.displayName }}</span>
+              <span class="user-role">{{ authStore.userRole || 'Administrateur' }}</span>
             </div>
           </div>
         </div>
@@ -163,8 +163,8 @@ const handleUseAIQuestions = () => {
               <span class="kpi-badge badge-green">{{ store.kpis.upcomingTrend }}</span>
             </div>
             <div class="kpi-body">
-              <span class="kpi-label">À VENIR CETTE SEMAINE</span>
-              <span class="kpi-value">{{ store.kpis.upcomingWeek }} Entretiens Planifiés</span>
+              <span class="kpi-label">SESSIONS D'ENTRETIENS</span>
+              <span class="kpi-value">{{ store.kpis.upcomingWeek }} Session(s)</span>
             </div>
           </div>
 
@@ -177,13 +177,26 @@ const handleUseAIQuestions = () => {
               <span class="kpi-badge badge-gray">{{ store.kpis.totalTrend }}</span>
             </div>
             <div class="kpi-body">
-              <span class="kpi-label">TOTAL CANDIDATS POUR DEV WEB/IA</span>
-              <span class="kpi-value">{{ store.kpis.totalDevWebIa }} personnes</span>
+              <span class="kpi-label">CANDIDATS CONVOQUÉS</span>
+              <span class="kpi-value">{{ store.kpis.totalCandidates }} Candidat(s)</span>
             </div>
           </div>
 
-
           <!-- Card 3 -->
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon icon-purple">
+                <i class="bi bi-person-badge"></i>
+              </div>
+              <span class="kpi-badge badge-gray">{{ store.kpis.jurysTrend }}</span>
+            </div>
+            <div class="kpi-body">
+              <span class="kpi-label">JURYS MOBILISÉS</span>
+              <span class="kpi-value">{{ store.kpis.totalJurys }} Membre(s)</span>
+            </div>
+          </div>
+
+          <!-- Card 4 -->
           <div class="kpi-card">
             <div class="kpi-top">
               <div class="kpi-icon icon-green">
@@ -192,7 +205,7 @@ const handleUseAIQuestions = () => {
               <span class="kpi-badge badge-green">{{ store.kpis.completionTrend }}</span>
             </div>
             <div class="kpi-body">
-              <span class="kpi-label">TAUX DES ENTRETIEN EFFECTUÉ</span>
+              <span class="kpi-label">TAUX DE VALIDATION</span>
               <span class="kpi-value">{{ store.kpis.completionRate }}%</span>
             </div>
           </div>
@@ -210,11 +223,8 @@ const handleUseAIQuestions = () => {
                   class="filter-select"
                   @change="store.setFilterProgram($event.target.value)"
                 >
-                  <option value="">Tous</option>
-                  <option value="Developpement Web">Developpement Web</option>
-                  <option value="Assistance digital">Assistance digital</option>
-                  <option value="Designer UX/UI">Designer UX/UI créatif</option>
-                  <option value="Analyste">Analyste en stratégie commerciale</option>
+                  <option value="">Tous les programmes</option>
+                  <option v-for="c in store.campagnes" :key="c.id" :value="c.title">{{ c.title }}</option>
                 </select>
                 <i class="bi bi-chevron-down select-arrow"></i>
               </div>
@@ -300,9 +310,13 @@ const handleUseAIQuestions = () => {
             </thead>
             <tbody>
               <tr v-if="store.filteredEntretiens.length === 0">
-                <td colspan="6" class="text-center py-5 text-muted">
-                  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                  Aucun entretien ne correspond à vos critères de recherche.
+                <td colspan="5" class="text-center py-5 text-muted">
+                  <i class="bi bi-calendar-x fs-1 d-block mb-3 text-secondary"></i>
+                  <h6 class="fw-bold text-dark mb-1">Aucune session d'entretien planifiée</h6>
+                  <p class="small text-muted mb-3">Créez votre première session d'évaluation pour cette campagne.</p>
+                  <button class="btn btn-sm btn-primary px-3 rounded-3" @click="navigateToPlanifier">
+                    <i class="bi bi-plus-lg me-1"></i> Planifier un entretien
+                  </button>
                 </td>
               </tr>
               <tr v-for="item in store.paginatedEntretiens" :key="item.id">

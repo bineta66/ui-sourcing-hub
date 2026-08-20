@@ -5,6 +5,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import Sidebar from '@/components/Sidebar.vue'
 import { useCampagneStore } from '@/stores/campagnes'
+import { useAuthStore } from '@/stores/auth'
 import { getReunionInformation, getCreneaux } from '@/api/endpoints/reunionInformation'
 import ReunionInformationCard from '@/components/reunion/ReunionInformationCard.vue'
 
@@ -12,8 +13,9 @@ import ReunionInformationCard from '@/components/reunion/ReunionInformationCard.
 const route = useRoute()
 const campagneId = route.params.id
 
-// Initialisation du store Pinia des campagnes
+// Initialisation des stores Pinia
 const campagneStore = useCampagneStore()
+const authStore = useAuthStore()
 
 const currentView = ref('campagnes')
 const reunion = ref(null)
@@ -135,18 +137,18 @@ onMounted(async () => {
             <div class="user-information">
 
               <div class="user-name">
-                Ndeye
+                {{ authStore.displayName }}
               </div>
 
               <div class="user-role">
-                HR SUPERVISOR
+                {{ authStore.userRole || 'Administrateur' }}
               </div>
 
             </div>
 
             <img
-              src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=100&auto=format&fit=crop"
-              alt="Avatar de Ndeye"
+              :src="`https://ui-avatars.com/api/?name=${encodeURIComponent(authStore.displayName)}&background=D20C4F&color=fff&size=36`"
+              :alt="authStore.displayName"
               class="user-avatar"
             />
 

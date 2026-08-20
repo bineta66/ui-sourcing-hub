@@ -22,12 +22,18 @@ const department = ref('Dev Web / IA')
 const handleAdd = () => {
   if (!name.value.trim()) return
 
+  const parts = name.value.trim().split(' ')
+  const prenom = parts.length > 1 ? parts.slice(0, -1).join(' ') : parts[0]
+  const nom = parts.length > 1 ? parts[parts.length - 1] : 'Candidat'
+
   emit('add', {
     type: props.type,
     name: name.value.trim(),
-    role: role.value.trim() || (props.type === 'recruiter' ? 'Recruteur' : 'Candidat'),
+    prenom: prenom,
+    nom: nom,
+    role: role.value.trim() || (props.type === 'recruiter' ? 'Membre du Jury' : 'Candidat'),
     department: department.value,
-    email: email.value.trim()
+    email: email.value.trim() || `${prenom.toLowerCase()}.${nom.toLowerCase()}@simplon.co`
   })
 
   name.value = ''

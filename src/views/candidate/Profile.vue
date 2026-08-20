@@ -18,8 +18,7 @@
           <div class="campaign-selector">
             <span class="campaign-label">Campagne</span>
             <div class="campaign-name">
-              DWWM 2026
-              <i class="fa-solid fa-chevron-down ms-1"></i>
+              Espace Candidat
             </div>
           </div>
         </div>
@@ -32,14 +31,14 @@
               <div class="profile-avatar">
                 <img
                   :src="profile.avatarUrl"
-                  alt="Bineta Badiane"
+                  :alt="profile.firstName + ' ' + profile.lastName"
                   class="avatar-img"
                 />
               </div>
               <div class="profile-identity">
                 <h2 class="profile-name">{{ profile.firstName }} {{ profile.lastName }}</h2>
-                <p class="profile-role">Candidate</p>
-                <span class="profile-campaign">Candidat(e) — DWWM 2026</span>
+                <p class="profile-role">Candidat(e)</p>
+                <span class="profile-campaign">Espace Candidat — Sourcing HUB</span>
               </div>
             </div>
             <button class="btn btn-submit btn-sm" @click="openEditModal">
@@ -216,13 +215,13 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const profile = reactive({
-  firstName: authStore.user?.first_name || 'Bineta',
-  lastName: authStore.user?.last_name || 'Badiane',
-  email: authStore.user?.email || 'bineta.badiane@email.com',
-  phone: authStore.user?.phone_number || '+221 77 123 45 67',
+  firstName: authStore.user?.first_name || authStore.displayName || 'Candidat',
+  lastName: authStore.user?.last_name || '',
+  email: authStore.user?.email || '',
+  phone: authStore.user?.phone_number || '',
   birthDate: '12/05/2001',
   address: 'Dakar, Sénégal',
-  avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop',
+  avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(authStore.displayName)}&background=D20C4F&color=fff&size=200`,
   academic: {
     educationLevel: 'Licence',
     field: 'Informatique',

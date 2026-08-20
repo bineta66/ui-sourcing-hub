@@ -18,8 +18,7 @@
           <div class="campaign-selector">
             <span class="campaign-label">Campagne</span>
             <div class="campaign-name">
-              DWWM 2026
-              <i class="fa-solid fa-chevron-down ms-1"></i>
+              {{ nextInterview?.campagne_titre || 'Session Active' }}
             </div>
           </div>
         </div>
@@ -34,8 +33,8 @@
                   <i class="fa-solid fa-file-lines fs-4"></i>
                 </div>
                 <div class="application-info">
-                  <h2 class="application-title">Candidature DWWM 2026</h2>
-                  <p class="application-description">Formation Développement Web - Promotion 2026</p>
+                  <h2 class="application-title">{{ nextInterview?.campagne_titre || 'Ma Candidature' }}</h2>
+                  <p class="application-description">Dossier de candidature de {{ authStore.displayName }}</p>
                 </div>
               </div>
 
@@ -43,31 +42,27 @@
                 <div class="application-meta">
                   <div class="meta-block">
                     <span class="meta-label">Statut</span>
-                    <span class="status-badge success">Acceptée</span>
+                    <span class="status-badge success">{{ nextInterview ? 'Convoqué(e)' : 'Enregistrée' }}</span>
                   </div>
                   <div class="meta-block">
-                    <span class="meta-label">Date de candidature</span>
-                    <span class="meta-value">12 juillet 2026</span>
+                    <span class="meta-label">Candidat</span>
+                    <span class="meta-value">{{ authStore.displayName }}</span>
                   </div>
                   <div class="meta-block">
                     <span class="meta-label">Prochain entretien</span>
-                    <span class="meta-value">22 août 2026</span>
+                    <span class="meta-value">{{ nextInterview ? formatDate(nextInterview.date) : 'En attente de programmation' }}</span>
                   </div>
                 </div>
 
                 <div class="application-actions">
-                  <button class="btn btn-submit" @click="openConvocation('Convocation - Entretien technique')">
+                  <button v-if="nextInterview" class="btn btn-submit" @click="openConvocation('Détails de ma convocation', nextInterview)">
                     <i class="fa-regular fa-eye me-1"></i>
-                    Voir la convocation
+                    Voir ma convocation
                   </button>
-                  <button class="btn btn-submit" @click="openConvocation('Convocation - Entretien motivationnel')">
-                    <i class="fa-regular fa-eye me-1"></i>
-                    Voir la convocation motivationnelle
-                  </button>
-                  <button class="btn btn-submit" @click="openConvocation('Convocation globale')">
-                    <i class="fa-solid fa-download me-1"></i>
-                    Télécharger la convocation
-                  </button>
+                  <router-link to="/candidat/entretiens" class="btn btn-outline-primary">
+                    <i class="fa-regular fa-calendar-check me-1"></i>
+                    Consulter mes entretiens
+                  </router-link>
                 </div>
               </div>
             </div>
@@ -82,10 +77,10 @@
                 <h4 class="info-card-title mb-0">Informations utiles</h4>
               </div>
               <ul class="info-list">
-                <li>Conservez votre numéro de dossier : <strong>DWWM-2026-0042</strong></li>
-                <li>Présentez-vous 10 minutes avant l'entretien.</li>
+                <li>Email associé : <strong>{{ authStore.userEmail }}</strong></li>
+                <li>Présentez-vous 10 minutes avant chaque entretien.</li>
                 <li>Munissez-vous d'une pièce d'identité.</li>
-                <li>Contactez le support en cas de problème.</li>
+                <li>Contactez l'équipe pédagogique en cas d'empêchement.</li>
               </ul>
             </div>
 
@@ -98,27 +93,27 @@
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     />
                     <path class="circle"
-                      stroke-dasharray="66, 100"
+                      stroke-dasharray="100, 100"
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     />
                   </svg>
                   <div class="progress-text">
-                    <span class="progress-number">2/3</span>
-                    <span class="progress-label">étapes validées</span>
+                    <span class="progress-number">{{ convocations.length > 0 ? convocations.length : 1 }}</span>
+                    <span class="progress-label">{{ convocations.length > 0 ? 'convocation(s)' : 'dossier actif' }}</span>
                   </div>
                 </div>
                 <div class="progress-legend">
                   <div class="legend-item">
                     <span class="legend-dot passed"></span>
-                    <span>Dossier validé</span>
+                    <span>Dossier enregistré</span>
                   </div>
                   <div class="legend-item">
                     <span class="legend-dot passed"></span>
-                    <span>Présélection réussie</span>
+                    <span>Profil actif</span>
                   </div>
                   <div class="legend-item">
                     <span class="legend-dot upcoming"></span>
-                    <span>Entretiens à venir</span>
+                    <span>Entretiens programmés</span>
                   </div>
                 </div>
               </div>
@@ -140,39 +135,31 @@
           <div class="convocation-detail">
             <div class="convocation-row">
               <span class="convocation-label">Campagne</span>
-              <span class="convocation-value">DWWM 2026</span>
+              <span class="convocation-value">{{ selectedConvocationData?.campagne_titre || 'Campagne active' }}</span>
             </div>
             <div class="convocation-row">
               <span class="convocation-label">Candidat</span>
-              <span class="convocation-value">Bineta Badiane</span>
+              <span class="convocation-value">{{ authStore.displayName }}</span>
             </div>
             <div class="convocation-row">
               <span class="convocation-label">Date</span>
-              <span class="convocation-value">22 août 2026</span>
+              <span class="convocation-value">{{ formatDate(selectedConvocationData?.date) }}</span>
             </div>
             <div class="convocation-row">
               <span class="convocation-label">Heure</span>
-              <span class="convocation-value">09:00 - 09:45</span>
+              <span class="convocation-value">{{ selectedConvocationData?.heure_debut?.substring(0, 5) }} {{ selectedConvocationData?.heure_fin ? '- ' + selectedConvocationData.heure_fin.substring(0, 5) : '' }}</span>
             </div>
             <div class="convocation-row">
-              <span class="convocation-label">Durée</span>
-              <span class="convocation-value">45 min</span>
+              <span class="convocation-label">Lieu / Format</span>
+              <span class="convocation-value">{{ selectedConvocationData?.lieu || 'Simplon Sénégal' }}</span>
             </div>
-            <div class="convocation-row">
-              <span class="convocation-label">Format</span>
-              <span class="convocation-value">Entretien en ligne</span>
-            </div>
-            <div class="convocation-row">
-              <span class="convocation-label">Jury</span>
-              <span class="convocation-value">2 membres</span>
-            </div>
-            <div class="convocation-row">
-              <span class="convocation-label">Lien de connexion</span>
-              <a href="#" class="convocation-link">https://meet.sourcinghub.example.com/entretien-1</a>
+            <div v-if="selectedConvocationData?.lien_visio" class="convocation-row">
+              <span class="convocation-label">Lien de visio</span>
+              <a :href="selectedConvocationData.lien_visio" target="_blank" class="convocation-link">{{ selectedConvocationData.lien_visio }}</a>
             </div>
             <div class="convocation-row">
               <span class="convocation-label">Instructions</span>
-              <span class="convocation-value">Connectez-vous 10 minutes avant l'heure prévue.</span>
+              <span class="convocation-value">Veuillez vous présenter 10 minutes avant l'heure prévue.</span>
             </div>
           </div>
         </div>
@@ -189,30 +176,65 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import CandidateSidebar from '@/components/CandidateSidebar.vue'
+import { useAuthStore } from '@/stores/auth'
+import { getMesConvocations } from '@/api/endpoints/convocations'
 
+const router = useRouter()
+const authStore = useAuthStore()
 const currentView = ref('candidature')
 const showConvocationModal = ref(false)
 const selectedConvocation = ref('')
+const selectedConvocationData = ref(null)
+const convocations = ref([])
+const loading = ref(false)
 
-const handleLogout = () => {
-  console.log("Déconnexion de l'utilisateur")
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
 }
 
-const openConvocation = (title) => {
+const nextInterview = computed(() => {
+  return convocations.value.length > 0 ? convocations.value[0] : null
+})
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return 'Date à définir'
+  return new Date(dateStr).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
+}
+
+const openConvocation = (title, conv = null) => {
   selectedConvocation.value = title
+  selectedConvocationData.value = conv || nextInterview.value
   showConvocationModal.value = true
 }
 
 const closeConvocation = () => {
   showConvocationModal.value = false
+  selectedConvocationData.value = null
 }
 
 const confirmConvocation = () => {
-  alert('Confirmation enregistrée.')
   closeConvocation()
 }
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    const { data } = await getMesConvocations()
+    convocations.value = Array.isArray(data) ? data : (data?.results || [])
+  } catch (err) {
+    console.error('Erreur récupération convocations:', err)
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <style scoped>

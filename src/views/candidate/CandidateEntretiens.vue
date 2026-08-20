@@ -16,10 +16,9 @@
           </button>
 
           <div class="campaign-selector">
-            <span class="campaign-label">Campagne</span>
+            <span class="campaign-label">Espace</span>
             <div class="campaign-name">
-              DWWM 2026
-              <i class="fa-solid fa-chevron-down ms-1"></i>
+              {{ upcomingConvocations[0]?.campagne_titre || 'Mes Entretiens' }}
             </div>
           </div>
         </div>
