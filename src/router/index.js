@@ -18,6 +18,8 @@ import CandidateEntretiens from '../views/candidate/CandidateEntretiens.vue'
 import CandidateTests from '../views/candidate/CandidateTests.vue'
 import CandidateCandidature from '../views/candidate/CandidateCandidature.vue'
 import CandidateProfile from '../views/candidate/Profile.vue'
+import EntretiensDashboard from '../views/entretiens/EntretiensDashboard.vue'
+import PlanifierEntretien from '../views/entretiens/PlanifierEntretien.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -117,6 +119,19 @@ const router = createRouter({
       name: 'campaign-form-builder',
       component: FormBuilderView,
       meta: { requiresAuth: true, requiresAdmin: true, roles: ['ADMIN'] },
+    },
+    // Espace Entretiens (Admin / Jury)
+    {
+      path: '/entretiens',
+      name: 'entretiens',
+      component: EntretiensDashboard,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
+    },
+    {
+      path: '/entretiens/planifier',
+      name: 'planifier-entretien',
+      component: PlanifierEntretien,
+      meta: { requiresAuth: true, roles: ['ADMIN', 'JURY'] },
     },
     // Espace Candidat
     {

@@ -194,7 +194,7 @@ const handleLogin = async () => {
     console.log('Auth user:', auth.user)
     console.log('Is admin:', auth.isAdmin)
 
-    const defaultHome = authStore.isCandidate ? '/candidate/entretiens' : '/campagnes'
+    const defaultHome = auth.isCandidate ? '/candidate/entretiens' : '/campagnes'
     const redirectPath = route.query.redirect || defaultHome
     router.push(redirectPath)
   } catch (error) {

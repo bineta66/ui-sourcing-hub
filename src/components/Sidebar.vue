@@ -22,7 +22,7 @@ const handleLogout = async () => {
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'fa-solid fa-chart-pie', to: '/campagnes' },
-  { id: 'entretien', label: 'Entretien', icon: 'fa-regular fa-calendar-check', to: '/campagnes' },
+  { id: 'entretien', label: 'Entretien', icon: 'fa-regular fa-calendar-check', to: '/entretiens' },
   { id: 'candidates', label: 'Candidates', icon: 'fa-solid fa-user-group', to: '/gestion-utilisateurs' },
   { id: 'campagnes', label: 'Campagnes', icon: 'fa-solid fa-file-lines', to: '/campagnes' },
   { id: 'utilisateurs', label: 'Utilisateurs', icon: 'fa-solid fa-users', to: '/gestion-utilisateurs' },
